@@ -41,6 +41,14 @@ git clone https://github.com/Santazuki/Unblind.git ~/.claude/skills/unblind
 
 然后直接发一张图片给 Claude Code。首次运行会自动引导你配置 Mimo API Key，无需手动编辑任何文件。
 
+### 更新
+
+```bash
+npx skills update unblind
+```
+
+Skill 内置版本检查：每次会话自动对比 GitHub 仓库，有新版本会主动提醒。
+
 ## 前提条件
 
 - Node.js >= 18
@@ -127,6 +135,14 @@ git clone https://github.com/Santazuki/Unblind.git ~/.claude/skills/unblind
 ```
 
 Send any image to Claude Code. First run guides you through API key setup — no manual file editing.
+
+### Update
+
+```bash
+npx skills update unblind
+```
+
+Built-in version check: compares against GitHub on each session, notifies you when an update is available.
 
 ## Requirements
 

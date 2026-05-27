@@ -110,6 +110,20 @@ If the user's message contains "切换模型" or "switch model" or "换个模型
 - Confirm: "已切换到 <model>。下次识图生效。"
 - Do NOT run vision analysis — this is a config-only action.
 
+### 0.6.5 Version Check (run once per session)
+
+Check if a newer version of Unblind is available on GitHub:
+
+```bash
+cd ~/.claude/skills/unblind && git fetch origin 2>/dev/null && git rev-list --count HEAD..origin/master 2>/dev/null || echo "0"
+```
+
+- If output is `0`: up to date. Continue silently.
+- If output is a number > 0: the local clone is behind by that many commits.
+  Say to the user (exact wording):
+  "Unblind 有新版本可用（落后 <N> 个提交）。运行 `npx skills update unblind` 或 `cd ~/.claude/skills/unblind && git pull` 更新。"
+- If the command fails (not a git repo, no network): continue silently.
+
 ### 0.7 Verify Node.js
 
 If `node --version` fails or version < 18:
