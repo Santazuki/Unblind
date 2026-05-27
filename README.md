@@ -105,6 +105,21 @@ Unblind 的链路是：
 
 一句话：**MCP 是高速公路，Unblind 只需要一条自行车道。**
 
+## 安全验证
+
+| 验证项 | 状态 |
+|---|---|
+| API Key 不出现在对话记录中 | 已验证 — Phase 0.2 用户终端自行写入 |
+| API Key 不出现在 Bash 命令输出中 | 已验证 — 零 export，依赖 Claude Code env 自动注入 |
+| 命令注入防护 | 已验证 — 路径校验门拦截特殊字符 |
+| 请求超时保护 | 已验证 — 30s AbortController |
+| 文件大小限制 | 已验证 — 50MB 上限 + 空文件检测 |
+| GPG 签名 | 已验证 — 全部 commit 通过 `git log --show-signature` |
+| 多模型切换 | 已验证 — v2.5 ↔ v2-omni |
+| 全场景识图 | 已验证 — 中文截图/人像/电商图/宠物照/meme/3D渲染 |
+
+完整测试报告见 [TEST.md](TEST.md)。
+
 ---
 
 ## English
@@ -197,6 +212,21 @@ DeepSeek draws its name from a classical Chinese poem: *"The road is long and wi
 Seeking without sight is blindness. Unblind removes the blindfold.
 
 *DeepSeek seeks. Unblind lets it see.*
+
+## Security Verification
+
+| Check | Status |
+|---|---|
+| API Key never in chat transcript | Verified — user writes key via terminal, not paste |
+| API Key never in Bash output | Verified — zero exports, Claude Code env auto-injection |
+| Command injection guard | Verified — path validation gate blocks metacharacters |
+| Request timeout | Verified — 30s AbortController |
+| File size limit | Verified — 50MB cap + empty file rejection |
+| GPG signing | Verified — all commits pass `git log --show-signature` |
+| Multi-model switching | Verified — v2.5 ↔ v2-omni |
+| Multi-scene recognition | Verified — text screenshots, portraits, product images, pet photos, memes, 3D renders |
+
+Full test report: [TEST.md](TEST.md).
 
 ## License
 
