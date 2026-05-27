@@ -216,7 +216,7 @@ If the tool returns an API key error, re-enter Phase 0.2.
 ## Quick Install
 
 ```bash
-git clone https://github.com/Santazuki/Unblind.git ~/.claude/skills/unblind
+git clone https://github.com/Santazuki/unblind.git ~/.claude/skills/unblind
 ```
 
 The skill self-configures on first use.
