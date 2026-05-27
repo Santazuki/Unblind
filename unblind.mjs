@@ -1,10 +1,12 @@
 #!/usr/bin/env node
-import { readFileSync } from "fs";
+import { readFileSync, statSync } from "fs";
 import { basename, extname } from "path";
 
 const MIMO_API_KEY = process.env.MIMO_API_KEY || "";
 const MIMO_BASE_URL = process.env.MIMO_BASE_URL || "https://token-plan-cn.xiaomimimo.com/anthropic";
 const MIMO_MODEL = process.env.MIMO_VISION_MODEL || "mimo-v2.5";
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const REQUEST_TIMEOUT = 30_000; // 30 seconds
 
 const SUPPORTED_EXTS = new Set([
   ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg"
@@ -18,7 +20,7 @@ const MIME_MAP = {
 };
 
 function usage() {
-  console.log(`Usage: node mimo-vision.mjs <image-path> [mode]
+  console.log(`Usage: node unblind.mjs <image-path> [mode]
 
 Modes:
   describe     (default) Detailed image description
@@ -30,7 +32,7 @@ Modes:
 Env vars:
   MIMO_API_KEY       Required - your Mimo API key
   MIMO_BASE_URL      Default: https://token-plan-cn.xiaomimimo.com/anthropic
-  MIMO_VISION_MODEL  Default: claude-haiku-4-5-20251001`);
+  MIMO_VISION_MODEL  Default: mimo-v2.5`);
   process.exit(1);
 }
 
@@ -69,6 +71,16 @@ async function main() {
   const mimeType = MIME_MAP[ext];
   let imageData;
   try {
+    const fileStat = statSync(imagePath);
+    if (fileStat.size > MAX_FILE_SIZE) {
+      console.error(`Error: file too large (${(fileStat.size / 1024 / 1024).toFixed(1)}MB). Max: ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+      process.exit(1);
+    }
+    if (fileStat.size === 0) {
+      console.error("Error: file is empty");
+      process.exit(1);
+    }
+
     imageData = readFileSync(imagePath);
     // Convert to base64 data URL
     const base64 = imageData.toString("base64");
@@ -99,6 +111,8 @@ async function main() {
     };
 
     const url = `${MIMO_BASE_URL}/v1/messages`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -106,8 +120,10 @@ async function main() {
         "x-api-key": MIMO_API_KEY,
         "anthropic-version": "2023-06-01"
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      signal: controller.signal
     });
+    clearTimeout(timer);
 
     if (!response.ok) {
       const errText = await response.text();
@@ -122,7 +138,9 @@ async function main() {
     console.log(content);
 
   } catch (err) {
-    if (err.code === "ENOENT") {
+    if (err.name === "AbortError") {
+      console.error(`Error: request timed out after ${REQUEST_TIMEOUT / 1000}s`);
+    } else if (err.code === "ENOENT") {
       console.error(`File not found: ${imagePath}`);
     } else {
       console.error(`Error: ${err.message}`);
