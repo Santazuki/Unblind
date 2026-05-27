@@ -3,7 +3,8 @@ import { readFileSync, statSync } from "fs";
 import { basename, extname } from "path";
 
 const MIMO_API_KEY = process.env.MIMO_API_KEY || "";
-const MIMO_BASE_URL = process.env.MIMO_BASE_URL || "";
+// Base URL is auto-detected from key type (ignores MIMO_BASE_URL env)
+// sk- keys → api.xiaomimimo.com, tp- keys → token-plan-cn.xiaomimimo.com
 const MIMO_MODEL = process.env.MIMO_VISION_MODEL || "mimo-v2.5";
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const REQUEST_TIMEOUT = 30_000; // 30 seconds
@@ -13,7 +14,7 @@ const KEY_TYPE = MIMO_API_KEY.startsWith("sk-") ? "balance" : "token";
 const DEFAULT_BASE_URL = KEY_TYPE === "balance"
   ? "https://api.xiaomimimo.com/anthropic"
   : "https://token-plan-cn.xiaomimimo.com/anthropic";
-const BASE_URL = MIMO_BASE_URL || DEFAULT_BASE_URL;
+const BASE_URL = DEFAULT_BASE_URL;
 const AUTH_HEADER = KEY_TYPE === "balance"
   ? { "Authorization": `Bearer ${MIMO_API_KEY}` }
   : { "x-api-key": MIMO_API_KEY };
