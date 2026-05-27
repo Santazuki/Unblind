@@ -60,13 +60,11 @@ Read `~/.claude/settings.json` and check three things:
 
 If `MIMO_API_KEY` is missing or empty:
 - Say to the user (exact wording):
-  "Unblind 需要 Mimo Token Plan API Key 来调用视觉模型。请到 https://token-plan-cn.xiaomimimo.com 获取密钥，然后发给我。"
-- Wait for the user to provide the key.
-- Once received, merge it into `~/.claude/settings.json` under `.env`:
-  ```json
-  "MIMO_API_KEY": "<user-provided-key>"
-  ```
-- Do NOT overwrite other env keys.
+  "Unblind 需要 Mimo Token Plan API Key 来调用视觉模型。请到 https://token-plan-cn.xiaomimimo.com 获取密钥，然后在终端运行这条命令（替换 YOUR_KEY）：
+   node -e \"const fs=require('fs');const s=JSON.parse(fs.readFileSync(process.env.HOME+'/.claude/settings.json','utf8'));s.env.MIMO_API_KEY='YOUR_KEY';fs.writeFileSync(process.env.HOME+'/.claude/settings.json',JSON.stringify(s,null,2)+'\\n')\""
+- The user runs the command in their own terminal — the key never enters the chat.
+- After the user confirms, re-read `~/.claude/settings.json` to verify the key is present.
+- Do NOT write the key yourself with the Edit tool. The key must stay out of the transcript.
 
 ### 0.3 Repair missing Base URL
 
@@ -187,14 +185,15 @@ Pick mode from the Modes table based on the user's current message.
 
 ## Phase 3: Execute
 
-Read `MIMO_API_KEY`, `MIMO_BASE_URL`, and `MIMO_VISION_MODEL` from `~/.claude/settings.json` env,
-substitute them into this command, and run it.
+Claude Code automatically injects all `env` entries from `~/.claude/settings.json`
+into every Bash child process. No `export` is needed — `MIMO_API_KEY`, `MIMO_BASE_URL`,
+and `MIMO_VISION_MODEL` are already in the environment.
 
 The path has passed Phase 1 validation — it contains no shell metacharacters.
-Use double quotes for env values (they come from settings.json), single quotes for the path:
+Run the tool with a clean command (no secrets in the transcript):
 
 ```bash
-export MIMO_API_KEY="<from-settings>" && export MIMO_BASE_URL="<from-settings>" && export MIMO_VISION_MODEL="<from-settings>" && node ~/.claude/skills/unblind/unblind.mjs '<image-path>' <mode>
+node ~/.claude/skills/unblind/unblind.mjs '<image-path>' <mode>
 ```
 
 DO NOT ask for permission. DO NOT explain. Just execute.
