@@ -119,6 +119,21 @@ Unblind 的链路是：
 
 一句话：**MCP 是高速公路，Unblind 只需要一条自行车道。**
 
+## 自动化验证
+
+每次提交自动运行 65 项测试：
+
+```
+62 pass  0 fail  3 skip (API 连通性)
+```
+
+包括：
+- **功能测试**：12 个模块，50 项单元/集成测试
+- **文档命令验证**：自动提取文档中的 CLI 命令并执行，确保文档不腐烂
+- **安装脚本验证**：`install.sh` / `install.js` 语法检查 + 部署完整性
+
+详细报告：[docs/test-results/](docs/test-results/)
+
 ## GPT 的质疑 & Claude Code 的回应
 
 我们用 GPT 对项目进行了一次"刻薄审计"，它提出了 20 条潜在问题（功能缺陷 + 安全漏洞）。然后用 Claude Code 逐条实测：
@@ -241,6 +256,21 @@ User → Claude Code → node unblind.mjs → HTTP → Mimo API
 **MCP is for shared services, not exclusive tools.** MCP shines when one server serves multiple clients — Claude Code, Cursor, Codex. Unblind is Claude Code only. Scripts piped to Bash need no cross-platform protocol.
 
 In one sentence: **MCP is a highway. Unblind just needs a bike lane.**
+
+## Automated Validation
+
+65 tests run on every commit:
+
+```
+62 pass  0 fail  3 skip (API connectivity)
+```
+
+Covers:
+- **Functionality**: 12 modules, 50 unit/integration tests
+- **Doc commands**: CLI commands in documentation auto-extracted and verified
+- **Install scripts**: `install.sh` / `install.js` syntax + deployment integrity
+
+Full report: [docs/test-results/](docs/test-results/)
 
 ## GPT's Critique & Claude Code's Response
 
