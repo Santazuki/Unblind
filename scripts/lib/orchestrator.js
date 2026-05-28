@@ -98,8 +98,8 @@ export async function analyze(imagePath, mode = "describe", options = {}) {
         }
         return result.content;
       } catch (fallbackErr) {
-        throw new ClientError("所有 Provider 均失败", {
-          suggestion: `主 Provider (${primary.name}): ${err.message}；备选 Provider (${fallback.name}): ${fallbackErr.message}`,
+        throw new ClientError("所有 API 服务均不可用", {
+          suggestion: "请稍后重试。若持续出现，请检查 API Key 配置或网络连接。",
         });
       }
     }

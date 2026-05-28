@@ -60,11 +60,13 @@ export async function processImage(imagePath, options = {}) {
     fileStat = statSync(imagePath);
   } catch (err) {
     if (err.code === "ENOENT") {
-      throw new ClientError(`文件不存在: ${imagePath}`, {
+      throw new ClientError("文件不存在", {
         suggestion: "请检查文件路径是否正确",
       });
     }
-    throw err;
+    throw new ClientError(`无法读取文件: ${err.code || err.message}`, {
+      suggestion: "请检查文件权限和路径是否正确",
+    });
   }
 
   if (!fileStat.isFile()) throw new ClientError("路径不是文件");

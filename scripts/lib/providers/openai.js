@@ -1,4 +1,5 @@
 import { BaseProvider } from "./provider.js";
+import { ClientError } from "../errorHandler.js";
 import { log } from "../logger.js";
 
 export class OpenAIProvider extends BaseProvider {
@@ -25,7 +26,9 @@ export class OpenAIProvider extends BaseProvider {
 
   async _parseResponse(res) {
     const data = await res.json();
-    return data.choices?.[0]?.message?.content || JSON.stringify(data);
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new ClientError("API 返回格式异常，未找到文本内容");
+    return content;
   }
 }
 log("debug", "openai", "module_loaded");

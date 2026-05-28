@@ -1,5 +1,6 @@
 import { getBaseUrl, getAuthHeader } from "../credentialManager.js";
 import { BaseProvider } from "./provider.js";
+import { ClientError } from "../errorHandler.js";
 import { log } from "../logger.js";
 
 export class MimoProvider extends BaseProvider {
@@ -27,7 +28,8 @@ export class MimoProvider extends BaseProvider {
   async _parseResponse(res) {
     const data = await res.json();
     const tb = data.content?.find(c => c.type === "text");
-    return tb?.text || JSON.stringify(data, null, 2);
+    if (!tb?.text) throw new ClientError("API 返回格式异常，未找到文本内容");
+    return tb.text;
   }
 
   _b64(d) { const i = d.indexOf(";base64,"); return i >= 0 ? d.slice(i + 8) : d; }

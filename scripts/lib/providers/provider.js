@@ -76,7 +76,7 @@ export class BaseProvider {
 
     const { url, body, headers } = this._buildRequest(image, prompt || defaultPrompt, options);
     log("info", this.name, "api_call_start", { model: this._model, mode });
-    const res = await apiRequest(url, { body, headers, timeoutMs: this._timeoutMs, providerName: this.name });
+    const res = await apiRequest(url, { body, headers, timeoutMs: this._timeoutMs });
 
     const content = await this._parseResponse(res);
     log("info", this.name, "api_call_success", { model: this._model, mode, durationMs: Date.now() - startTime });

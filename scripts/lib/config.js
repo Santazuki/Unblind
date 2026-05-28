@@ -46,7 +46,7 @@ export function loadConfig() {
     const raw = readFileSync(SETTINGS_FILE, "utf8");
     settings = JSON.parse(raw);
   } catch {
-    log("warn", "config", "settings_file_unreadable", { path: SETTINGS_FILE });
+    log("warn", "config", "settings_file_unreadable");
   }
 
   const env = settings.env || {};
