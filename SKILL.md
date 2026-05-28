@@ -45,16 +45,29 @@ You are **Unblind**, a vision agent for DeepSeek. Your job:
 Executes on EVERY invocation. Reads current state and repairs what's broken.
 When everything is healthy, passes through silently.
 
-### 0.1 Read current config
+### 0.1 Check config (NEVER output the API key to the transcript)
 
-Read `~/.claude/settings.json` and check three things:
+Check each condition WITHOUT reading settings.json directly — the Read tool would print the full key into the chat.
 
-| Check | Key | Expected |
-|---|---|---|
-| API Key | `.env.MIMO_API_KEY` | Non-empty string starting with `tp-` or `sk-` |
-| Base URL | `.env.MIMO_BASE_URL` | Auto-detected: `token-plan-cn` for tp- keys, `api` for sk- keys |
-| Vision Model | `.env.MIMO_VISION_MODEL` | `mimo-v2.5` or `mimo-v2-omni` |
-| Permission | `.permissions.allow` | Contains `Bash(*~/.claude/skills/unblind/scripts/unblind.mjs*)` |
+Run these checks via Bash (they only output existence, never the value):
+
+```bash
+# Check API Key exists
+node -e "const s=JSON.parse(require('fs').readFileSync(require('os').homedir()+'/.claude/settings.json','utf8'));console.log(s.env?.MIMO_API_KEY?'KEY_OK':'KEY_MISSING')"
+
+# Check model
+node -e "const s=JSON.parse(require('fs').readFileSync(require('os').homedir()+'/.claude/settings.json','utf8'));console.log(s.env?.MIMO_VISION_MODEL||'MODEL_MISSING')"
+
+# Check permission
+node -e "const s=JSON.parse(require('fs').readFileSync(require('os').homedir()+'/.claude/settings.json','utf8'));const a=s.permissions?.allow||[];console.log(a.some(x=>x.includes('unblind'))?'PERM_OK':'PERM_MISSING')"
+
+# Check Base URL (auto-detected by tool, redundant check)
+node -e "const s=JSON.parse(require('fs').readFileSync(require('os').homedir()+'/.claude/settings.json','utf8'));console.log(s.env?.MIMO_BASE_URL||'URL_AUTO')"
+```
+
+Expected output for a healthy setup: `KEY_OK`, valid model name, `PERM_OK`, any URL.
+
+**IRON RULE:** Never use the Read tool on settings.json. Never print the API key value in any output. Use these Bash checks which only report status.
 
 ### 0.2 Repair missing API Key
 
@@ -66,7 +79,7 @@ If `MIMO_API_KEY` is missing or empty:
    获取后，在终端运行（替换 YOUR_KEY）：
    node -e \"const fs=require('fs');const os=require('os');const p=require('path').join(os.homedir(),'.claude','settings.json');const s=JSON.parse(fs.readFileSync(p,'utf8'));s.env.MIMO_API_KEY='YOUR_KEY';fs.writeFileSync(p,JSON.stringify(s,null,2)+'\\n')\""
 - The user runs the command in their own terminal — the key never enters the chat.
-- After the user confirms, re-read `~/.claude/settings.json` to verify the key is present.
+- After the user confirms, run the Phase 0.1 Bash key check to verify it's present (NEVER read settings.json directly).
 - Do NOT write the key yourself with the Edit tool. The key must stay out of the transcript.
 
 ### 0.3 Repair missing Base URL
