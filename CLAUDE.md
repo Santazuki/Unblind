@@ -79,3 +79,41 @@ docs/test-results/           # 11 份按步骤的测试结果
 ## 记忆文件
 
 `~/.claude/projects/D--My-Projects-unblind/memory/` — 设计决策、项目状态、文档索引，新对话自动加载。
+
+## 项目审计清单
+
+**阶段性完成或重大变更后，逐项检查：**
+
+- [ ] `node --test tests/test-*.js` — 全部通过
+- [ ] `git status` — 无遗漏的未跟踪文件
+- [ ] 无残留占位文件（`scripts/` 下不应有仅含注释的空壳）
+- [ ] `tests/sample_images/` 中无真实图片（仅允许 .md）
+- [ ] `grep -r "tp-cla\|sk-anti" scripts/` — 源码中无硬编码 Key
+- [ ] `.gitignore` 覆盖：settings.json、.env、node_modules、测试图片
+- [ ] 所有新增文件已 `git add`
+- [ ] `scripts/lib/` 模块数与设计文档一致
+- [ ] CLAUDE.md 状态描述与实际一致（Phase 状态、测试数、commit 数）
+
+## 记忆维护策略
+
+| 触发条件 | 操作 |
+|----------|------|
+| 设计决策达成 | 追加到 `memory/design-decisions.md` |
+| Phase/里程碑完成 | 更新 `memory/project-state.md` |
+| 新增文档或目录 | 更新 `memory/doc-index.md` |
+| CLAUDE.md 信息过时 | 立即修正（状态表、测试数、目录结构） |
+| MEMORY.md 索引过期 | 同步更新链接和描述 |
+| 上下文低于 50% 时 | 主动写记忆，确保新对话可恢复 |
+
+## 开发工作流
+
+采用 **Subagent-Driven Development**（多 Agent 协作），流程：
+
+```
+需求 → brainstorm → spec → plan → subagent(implement → spec-review → code-review) → audit → memory
+```
+
+- **复杂任务**：使用 `superpowers:brainstorming` → `writing-plans` → `subagent-driven-development`
+- **小改动**：直接实现，不走 subagent dispatch
+- **每步验证**：`node --test` + 提交独立 commit
+- **Subagent 模型选择**：机械任务用 haiku（快/便宜），集成/判断用标准模型
