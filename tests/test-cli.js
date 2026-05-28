@@ -1,0 +1,59 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import { execSync } from "child_process";
+import { writeFileSync, unlinkSync } from "fs";
+import { join, dirname } from "path";
+import { tmpdir } from "os";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const UNBLIND = join(__dirname, "..", "scripts", "unblind.mjs");
+
+const MINI_PNG = Buffer.from([
+  0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A,
+  0x00,0x00,0x00,0x0D,0x49,0x48,0x44,0x52,
+  0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x01,
+  0x08,0x02,0x00,0x00,0x00,0x90,0x77,0x53,
+  0xDE,0x00,0x00,0x00,0x0C,0x49,0x44,0x41,
+  0x54,0x08,0xD7,0x63,0xF8,0xCF,0xC0,0x00,
+  0x00,0x00,0x03,0x00,0x01,0x47,0x53,0x22,
+  0xDE,0x00,0x00,0x00,0x00,0x49,0x45,0x4E,
+  0x44,0xAE,0x42,0x60,0x82
+]);
+
+describe("CLI", () => {
+  it("should print usage when no arguments", () => {
+    try {
+      execSync(`node "${UNBLIND}"`, { encoding: "utf8", env: { ...process.env } });
+    } catch (e) {
+      const output = (e.stderr || "") + (e.stdout || "");
+      assert.ok(output.includes("Usage"), "should show usage");
+    }
+  });
+
+  it("should fail for non-existent file", () => {
+    try {
+      execSync(`node "${UNBLIND}" /nonexistent/file.png`, { encoding: "utf8" });
+      assert.fail("should have thrown");
+    } catch (e) {
+      const output = (e.stderr || "") + (e.stdout || "");
+      assert.ok(output.includes("文件不存在") || output.includes("错误"),
+        "should report file not found");
+    }
+  });
+
+  it("should fail for unsupported mode", () => {
+    const p = join(tmpdir(), "test-cli.png");
+    writeFileSync(p, MINI_PNG);
+    try {
+      execSync(`node "${UNBLIND}" "${p}" invalid-mode`, { encoding: "utf8" });
+      assert.fail("should have thrown");
+    } catch (e) {
+      const output = (e.stderr || "") + (e.stdout || "");
+      assert.ok(output.includes("未知") || output.includes("模式"),
+        "should report unknown mode");
+    } finally {
+      try { unlinkSync(p); } catch {}
+    }
+  });
+});
