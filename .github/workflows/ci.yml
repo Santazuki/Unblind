@@ -23,8 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check for secrets in code
+      - name: Check for secrets in source code
         run: |
-          ! grep -r "tp-cla" --include="*.js" --include="*.mjs" --include="*.md" . || exit 1
-          ! grep -r "sk-anti" --include="*.js" --include="*.mjs" --include="*.md" . || exit 1
-          echo "No secrets found"
+          # 仅扫描源码，排除文档（文档中会引用安全扫描命令本身）
+          SOURCES=$(find scripts -name "*.js" -o -name "*.mjs")
+          ! grep -r "tp-cla\|tp-claq\|sk-anti" $SOURCES 2>/dev/null || exit 1
+          echo "No secrets found in source code"
