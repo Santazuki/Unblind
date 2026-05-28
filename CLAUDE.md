@@ -122,6 +122,7 @@ resources/troubleshooting.md # Phase 0 修复命令、常见错误
 - **复杂任务**：使用 `superpowers:brainstorming` → `writing-plans` → `subagent-driven-development`
 - **小改动**：直接实现，不走 subagent dispatch
 - **每步验证**：`node --test` + 提交独立 commit
+- **测试报告**：功能修复或新增后，必须输出测试报告到 `docs/test-results/step<N>-<name>.md`，包含测试数、通过/失败/跳过统计、失败原因
 - **Subagent 模型选择**：机械任务用 haiku（快/便宜），集成/判断用标准模型
 
 ### 安全审计流程

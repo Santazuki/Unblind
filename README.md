@@ -121,10 +121,10 @@ Unblind 的链路是：
 
 ## 自动化验证
 
-每次提交自动运行 65 项测试：
+每次提交自动运行 68 项测试（GitHub Actions 实际执行验证）：
 
 ```
-62 pass  0 fail  3 skip (API 连通性)
+65 pass  0 fail  3 skip (API 连通性)
 ```
 
 包括：
@@ -259,10 +259,10 @@ In one sentence: **MCP is a highway. Unblind just needs a bike lane.**
 
 ## Automated Validation
 
-65 tests run on every commit:
+68 tests run on every commit (verified in GitHub Actions):
 
 ```
-62 pass  0 fail  3 skip (API connectivity)
+65 pass  0 fail  3 skip (API connectivity)
 ```
 
 Covers:
