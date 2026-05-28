@@ -1,4 +1,4 @@
-import { statSync } from "fs";
+import { createHash } from "crypto";
 import { log, setLogLevel } from "./logger.js";
 import { loadConfig } from "./config.js";
 import { getApiKey, getBaseUrl } from "./credentialManager.js";
@@ -6,7 +6,7 @@ import { processImage } from "./imageProcessor.js";
 import { withRetry } from "./retry.js";
 import { MimoProvider } from "./providers/mimo.js";
 import { ClientError } from "./errorHandler.js";
-import { VALID_MODES } from "./providers/provider.js";
+import { MODE_PROMPTS, VALID_MODES } from "./providers/provider.js";
 import { getCacheKey, get, set, getStats } from "./cache.js";
 
 /**
@@ -42,12 +42,15 @@ export async function analyze(imagePath, mode = "describe", options = {}) {
     maxImageSize: config.maxImageSize,
   });
 
-  // 5. 缓存检查（文件已通过 processImage 校验，statSync 安全）
+  // 基于图片内容哈希 + 提示词生成缓存键
+  const imageHash = createHash("sha256").update(base64).digest("hex");
+  const prompt = MODE_PROMPTS[mode];
+
+  // 5. 缓存检查（基于内容哈希，无需 mtime）
   if (!options.skipCache) {
-    const cacheKey = getCacheKey(imagePath, mode);
-    const mtime = statSync(imagePath).mtimeMs;
+    const cacheKey = getCacheKey(imageHash, prompt);
     const cacheEntry = get(cacheKey);
-    if (cacheEntry && cacheEntry.mtime === mtime) {
+    if (cacheEntry) {
       log("info", "orchestrator", "cache_hit", {
         path: imagePath.slice(-30),
         mode,
@@ -81,11 +84,10 @@ export async function analyze(imagePath, mode = "describe", options = {}) {
       durationMs: result.processingTimeMs,
     });
 
-    // 缓存结果（含文件 mtime）
+    // 缓存结果（基于内容哈希，内容相同即命中）
     if (!options.skipCache) {
-      const cacheKey = getCacheKey(imagePath, mode);
-      const mtime = statSync(imagePath).mtimeMs;
-      set(cacheKey, { content: result.content, mtime }, config.cacheTTLSeconds || 3600);
+      const cacheKey = getCacheKey(imageHash, prompt);
+      set(cacheKey, { content: result.content }, config.cacheTTLSeconds || 3600);
     }
 
     return result.content;

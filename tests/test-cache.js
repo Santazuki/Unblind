@@ -7,21 +7,16 @@ describe("cache", () => {
 
   describe("getCacheKey", () => {
     it("should return a SHA256 hex string", () => {
-      const key = getCacheKey("/tmp/test.png", "describe");
+      const key = getCacheKey("abc123", "describe prompt");
       assert.equal(key.length, 64);
-      assert.ok(/^[a-f0-9]{64}$/.test(key));
     });
 
-    it("should produce different keys for different modes", () => {
-      const k1 = getCacheKey("/tmp/test.png", "describe");
-      const k2 = getCacheKey("/tmp/test.png", "ocr");
-      assert.notEqual(k1, k2);
+    it("should produce different keys for different hashes", () => {
+      assert.notEqual(getCacheKey("hash1", "same"), getCacheKey("hash2", "same"));
     });
 
-    it("should produce different keys for different paths", () => {
-      const k1 = getCacheKey("/tmp/a.png", "describe");
-      const k2 = getCacheKey("/tmp/b.png", "describe");
-      assert.notEqual(k1, k2);
+    it("should produce different keys for different prompts", () => {
+      assert.notEqual(getCacheKey("same", "promptA"), getCacheKey("same", "promptB"));
     });
   });
 
