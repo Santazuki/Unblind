@@ -1,112 +1,80 @@
 ---
 name: unblind
 description: >
-  Unblind — Give DeepSeek eyes. Self-contained + self-healing Claude Code
-  Agent Skill. DeepSeek models (v4/v4-pro/v4-flash) lack multimodal
-  capability — Unblind intercepts images and routes them to Mimo's
-  Anthropic-compatible vision API (mimo-v2.5, 100/200 credits).
-  Auto-detects missing config and repairs itself on first run.
-  Five modes: describe, ocr, ui-review, chart-data, object-detect.
-  Triggers: any image path, "analyze this image", "look at this",
+  Give DeepSeek vision capability. Routes images to Mimo/OpenAI vision API.
+  Self-healing setup on first run. Triggers: any image path, "analyze this",
   "what's in this picture", "read this screenshot", "extract text from",
-  "describe this chart", "review this UI", "识别图片", "看图",
-  "这张图片", "分析图片", "OCR", "图片描述".
+  "describe this chart", "review this UI", "识别图片", "看图", "OCR".
 metadata:
-  version: "2.1"
+  version: "2.2"
   category: ai-vision
   bundled_tools:
     - scripts/unblind.mjs
   requirements:
     - Node.js >= 18
-    - Mimo Token Plan API key (auto-prompted on first run)
+    - Mimo or OpenAI API key (auto-prompted on first run)
 ---
 
-<!-- LEVEL 1: Metadata above (always loaded, <200 tokens) -->
-<!-- LEVEL 2: Instructions below (loaded on trigger, <2000 tokens) -->
+<!-- LEVEL 1: Metadata above (~180 tokens, always loaded) -->
+<!-- LEVEL 2: Instructions below (~700 tokens, loaded on trigger) -->
 
 # Unblind
 
-Intercept images → route to Mimo/OpenAI vision API → return text.
-Never pretend to see. Never Read/Edit settings.json.
+Route images to vision API. Never pretend to see. Never Read/Edit settings.json.
 
 ## Iron Rules
 
-1. Phase 0 mandatory on every invocation
-2. NEVER Read/Edit `~/.claude/settings.json` — API key exposure risk
-3. All config ops via Bash `node -e` or bundled CLI (`--config`, `--set-model`)
+1. Phase 0 mandatory every invocation
+2. NEVER Read/Edit `~/.claude/settings.json`
+3. Config via CLI (`--config`, `--set-model`) or `node -e`, never via tools
 4. Never preamble. Never hallucinate. Always invoke bundled script.
-5. Tool reads API key from env (Claude Code injects automatically)
+5. Tool reads API key from env automatically
 
-## Phase 0: Self-Healing (silent when healthy)
+## Phase 0: Self-Healing
 
-### 0.1 Check health
+### 0.1 Silent health check
 
 ```bash
 node -e "const fs=require('fs');const os=require('os');const p=require('path').join(os.homedir(),'.claude','settings.json');const s=JSON.parse(fs.readFileSync(p,'utf8'));const issues=[];if(!s.env?.MIMO_API_KEY) issues.push('KEY_MISSING');if(!s.env?.MIMO_VISION_MODEL||s.env.MIMO_VISION_MODEL==='mimo-v2.5-pro') issues.push('MODEL_MISSING');const a=s.permissions?.allow||[];if(!a.some(x=>x.includes('unblind'))) issues.push('PERM_MISSING');if(issues.length) console.log(issues.join(' '));" 2>/dev/null
 ```
 
-- Empty → healthy, **skip silently to Phase 1**
+- Empty → healthy, **skip to Phase 1**
 - `KEY_MISSING` → 0.2 | `MODEL_MISSING` → 0.5 | `PERM_MISSING` → 0.4
 
-### 0.2 Repair API Key
+### 0.2-0.8 Repair procedures
 
-Tell user: "Unblind 需要 Mimo API Key。获取后在终端运行（替换 YOUR_KEY）：
+See `resources/troubleshooting.md` for: API key setup, base URL repair, permission fix, model selection, version check, Node.js check.
 
-node -e \"const fs=require('fs');const os=require('os');const p=require('path').join(os.homedir(),'.claude','settings.json');const s=JSON.parse(fs.readFileSync(p,'utf8'));s.env.MIMO_API_KEY='YOUR_KEY';fs.writeFileSync(p,JSON.stringify(s,null,2)+'\n')\""
-
-User runs in own terminal. Re-run 0.1 after. Never write key yourself.
-
-### 0.3 Repair Base URL
-
-```bash
-node -e "const fs=require('fs');const os=require('os');const p=require('path').join(os.homedir(),'.claude','settings.json');const s=JSON.parse(fs.readFileSync(p,'utf8'));const k=s.env?.MIMO_API_KEY||'';const u=k.startsWith('sk-')?'https://api.xiaomimimo.com/anthropic':'https://token-plan-cn.xiaomimimo.com/anthropic';if(!s.env.MIMO_BASE_URL){s.env.MIMO_BASE_URL=u;fs.writeFileSync(p,JSON.stringify(s,null,2)+'\n')}"
-```
-
-### 0.4 Repair permission
-
-```bash
-node -e "const fs=require('fs');const os=require('os');const p=require('path').join(os.homedir(),'.claude','settings.json');const s=JSON.parse(fs.readFileSync(p,'utf8'));if(!s.permissions)s.permissions={allow:[]};const a=s.permissions.allow;if(!a.some(x=>x.includes('unblind'))){a.push('Bash(*~/.claude/skills/unblind/scripts/unblind.mjs*)');fs.writeFileSync(p,JSON.stringify(s,null,2)+'\n')}"
-```
-
-### 0.5 Repair model | 0.6 Switch model | 0.7 Version check | 0.8 Node.js check
-
-See `resources/troubleshooting.md` for details.
+Key rules:
+- API key: user runs command in own terminal. Never write it yourself.
+- Model switch: user says "切换模型" → show prompt, write via Bash, confirm.
+- Version: `git fetch` → if behind, tell user to `git pull`.
 
 ### 0.9 All healthy → Phase 1
 
-## Phase 1-4: Analyze Image
+## Phase 1-4: Analyze
 
-**Phase 1:** Extract image path from `[Image: source: <path>]`. Validate: absolute path, supported ext, no shell metacharacters.
+1. **Detect** image path from `[Image: source: <path>]`. Must be absolute, supported ext, no shell metacharacters.
+2. **Classify** mode: `describe` (default), `ocr`, `ui-review`, `chart-data`, `object-detect`.
+3. **Execute**: `node ~/.claude/skills/unblind/scripts/unblind.mjs '<path>' <mode>` — no preamble.
+4. **Report**: print stdout. API key error → back to 0.2.
 
-**Phase 2:** Classify mode from Mode table. Default: `describe`.
+## CLI Quick Reference
 
-**Phase 3:** Execute:
-```bash
-node ~/.claude/skills/unblind/scripts/unblind.mjs '<image-path>' <mode>
 ```
-No preamble. No permission prompt.
+node scripts/unblind.mjs <image> <mode>  分析图片
+node scripts/unblind.mjs --health        健康检查
+node scripts/unblind.mjs --config        查看配置（Key已脱敏）
+node scripts/unblind.mjs --set-model <m> 切换模型 (mimo-v2.5 / mimo-v2-omni)
+node scripts/unblind.mjs --no-cache      跳过缓存
+node scripts/unblind.mjs --cache-stats   缓存统计
+```
 
-**Phase 4:** Print stdout. API key error → back to 0.2.
+<!-- LEVEL 3: Resources (on-demand, see files below) -->
 
-<!-- LEVEL 3: Resources below (loaded on-demand only) -->
+## Resources
 
-## Models & Modes
-
-| Model | Credits (in/out) | Vision |
-|---|---|---|
-| **mimo-v2.5** (default) | 100/200 | Yes |
-| mimo-v2-omni | 280/1400 | Yes |
-| gpt-4o (via OpenAI) | varies | Yes |
-
-mimo-v2.5-pro has NO vision support. Never use it.
-
-| Mode | Triggers |
-|---|---|
-| `describe` | default, "what's in", "describe", "描述" |
-| `ocr` | "read text", "extract", "OCR", "文字" |
-| `ui-review` | "review", "UI", "design", "界面" |
-| `chart-data` | "chart", "graph", "data", "图表" |
-| `object-detect` | "objects", "detect", "identify" |
-
-For detailed API docs, config guide, and troubleshooting, see `resources/best_practices.md`.
-For install guide, see README.md.
+- `resources/troubleshooting.md` — Phase 0 repair commands, common errors, Node.js setup
+- `resources/best_practices.md` — Model selection guide, token optimization, debugging
+- `templates/output_formats/` — JSON/YAML/CSV output templates (Phase 3+)
+- `README.md` — Install guide, security verification, GPT audit rebuttal
