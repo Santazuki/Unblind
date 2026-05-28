@@ -1,0 +1,31 @@
+{
+  "version": "2.0",
+  "activeProvider": "mimo",
+  "providers": {
+    "mimo": {
+      "apiKey": "YOUR_MIMO_API_KEY_HERE",
+      "apiUrl": "https://token-plan-cn.xiaomimimo.com/anthropic",
+      "modelName": "mimo-v2.5",
+      "timeoutMs": 30000
+    }
+  },
+  "processing": {
+    "maxImageSize": 1024,
+    "jpegQuality": 80,
+    "cacheEnabled": true,
+    "cacheTTLSeconds": 3600
+  },
+  "retry": {
+    "maxAttempts": 3,
+    "baseDelayMs": 1000,
+    "maxDelayMs": 10000
+  },
+  "circuitBreaker": {
+    "failureThreshold": 5,
+    "timeoutSeconds": 60
+  },
+  "logging": {
+    "level": "info",
+    "outputFile": "~/.claude/unblind/logs/unblind.log"
+  }
+}
