@@ -18,6 +18,10 @@
  * @property {number} processingTimeMs - 处理耗时
  */
 
+import { ClientError } from "../errorHandler.js";
+import { apiRequest, apiLog } from "../httpClient.js";
+import { log } from "../logger.js";
+
 /** 5 种分析模式对应的 prompt */
 export const MODE_PROMPTS = {
   describe:
@@ -47,3 +51,49 @@ export function validateProvider(obj) {
   if (typeof obj?.healthCheck !== "function") missing.push("healthCheck()");
   return { valid: missing.length === 0, missing };
 }
+
+/**
+ * Provider 基类 — 统一输入校验、计时、healthCheck
+ * 子类只需实现 _buildRequest(image, prompt, options) + _parseResponse(data)
+ */
+export class BaseProvider {
+  constructor({ apiKey, model, timeoutMs = 30_000 }) {
+    this._apiKey = apiKey;
+    this._model = model;
+    this._timeoutMs = timeoutMs;
+  }
+
+  _validate(mode) {
+    if (!this._apiKey) throw new ClientError("API Key 未配置");
+    if (!MODE_PROMPTS[mode]) throw new ClientError(`未知模式: ${mode}`);
+    return MODE_PROMPTS[mode];
+  }
+
+  async analyzeImage({ image, prompt, options = {} }) {
+    const mode = options.mode || "describe";
+    const defaultPrompt = this._validate(mode);
+    const startTime = Date.now();
+
+    const { url, body, headers } = this._buildRequest(image, prompt || defaultPrompt, options);
+    apiLog("info", this.name, "api_call_start", { model: this._model, mode });
+    const res = await apiRequest(url, { body, headers, timeoutMs: this._timeoutMs, providerName: this.name });
+
+    const content = await this._parseResponse(res);
+    apiLog("info", this.name, "api_call_success", { model: this._model, mode, durationMs: Date.now() - startTime });
+    return { content, model: this._model, processingTimeMs: Date.now() - startTime };
+  }
+
+  async healthCheck() {
+    try {
+      const miniPng = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
+      return (await this.analyzeImage({ image: miniPng, options: { mode: "describe", maxSize: 50 } })).content.length > 0;
+    } catch { return false; }
+  }
+
+  /** @abstract */
+  _buildRequest(image, prompt, options) { throw new Error("Not implemented"); }
+  /** @abstract */
+  async _parseResponse(res) { throw new Error("Not implemented"); }
+}
+
+log("debug", "provider", "module_loaded");
