@@ -1,108 +1,63 @@
-# CLAUDE.md — Unblind Project Architecture & Conventions
+# CLAUDE.md — Unblind
 
-> 本文档为 AI 编码助手（Claude Code、Copilot 等）在此仓库中协作时提供架构原则与开发约定。
-> 面向人类开发者的文档见 [README.md](README.md)。
+> Claude Code Agent Skill，为 DeepSeek 等纯文本模型提供视觉能力。图片 → Mimo API → 文字描述。
+> 核心哲学：自行车道不是高速公路。零 npm 依赖，克隆即用。
 
-## 项目定位
+## 当前状态
 
-Unblind 是一个 Claude Code Agent Skill，为纯文本模型（DeepSeek）提供视觉理解能力。
-通过拦截图片、路由到 Mimo 视觉 API，让 DeepSeek "看见"图片。
+Phase 1+2 完成。165 行单文件 → 12 模块，53/53 测试通过。19 commits 已推送。
 
-**核心哲学：自行车道，不是高速公路。**
-- 自包含单文件脚本，零 `npm install`
-- 三级按需加载，初始上下文 < 200 tokens
-- 自愈配置：首次运行自动检测并修复缺失配置
-
-## 技术栈
-
-- **运行时**：Node.js >= 18
-- **依赖**：零外部依赖（仅用 Node.js 内置 `fs`、`path`、`fetch`）
-- **外部 API**：Mimo Anthropic-compatible vision API（mimo-v2.5 / mimo-v2-omni）
-- **分发**：GitHub + npm skills registry
-
-## 架构原则
-
-1. **高内聚低耦合** — 模块职责单一，依赖清晰。当前为原型阶段（单文件），逐步向多 Provider 架构迁移。
-2. **配置驱动** — 所有模型接入通过 `settings.json` 声明，不修改核心代码。
-3. **安全先行** — API Key 不出现在终端输出和对话记录中，依赖 Claude Code env 自动注入。
-4. **优雅失败** — 外部依赖失效时有清晰的降级路径和用户提示。
-5. **做减法** — 够用即可。不引入 MCP 复杂度，不添加未被验证需要的抽象。
-
-## 目录结构
+## 目录结构（实际）
 
 ```
-unblind/
-├── SKILL.md              # 技能入口（三级加载）
-├── README.md             # 人类阅读文档
-├── CLAUDE.md             # AI 开发指导（本文件）
-├── LICENSE               # MIT
-├── install.sh            # 一键安装脚本
-├── settings.example.json # 示例配置
-├── docs/                 # 项目设计文档
-├── scripts/              # 工具脚本
-│   ├── unblind.mjs       #   核心视觉工具（当前阶段）
-│   ├── install.js        #   Node.js 安装脚本
-│   ├── imageProcessor.js #   图片预处理（Phase 1+）
-│   ├── cache.js          #   感知哈希缓存（Phase 2+）
-│   └── providers/        #   Vision Provider 实现（Phase 1+）
-├── templates/            # 输出模板
-│   ├── chain_of_thought.md
-│   └── output_formats/
-├── resources/            # 参考文档
-│   └── best_practices.md
-├── tests/                # 测试用例（纯文字，不含真实图片）
-│   └── sample_images/
-└── .github/workflows/    # CI/CD
+scripts/
+├── unblind.mjs              # CLI 入口（39行薄壳）: analyze / --health / --config / --set-model
+└── lib/
+    ├── orchestrator.js      # 调度核心：config → image → cache → provider → result
+    ├── config.js            # 读取 ~/.claude/settings.json，校验，默认值，saveConfig()
+    ├── credentialManager.js # API Key + Base URL 自动检测（tp-/sk- 前缀）
+    ├── imageProcessor.js    # 格式校验 + 大小限制 + Base64 编码
+    ├── cache.js             # SHA256 + mtime 精确匹配缓存，TTL 过期
+    ├── retry.js             # 指数退避 + Circuit Breaker 熔断器
+    ├── errorHandler.js      # ClientError / ServerError / NetworkError + 中文提示
+    ├── logger.js            # JSON Lines → stderr
+    └── providers/
+        ├── provider.js      # IVisionProvider 接口 + 5 种模式 prompt
+        └── mimo.js          # Mimo Anthropic-compatible API 适配
+tests/                       # 53 tests，node --test tests/test-*.js
+docs/test-results/           # 11 份按步骤的测试结果
 ```
 
 ## 开发约定
 
-### 安全红线（不可违反）
+- **零 npm 依赖** — 只用 Node.js >= 18 内置模块（fs/path/crypto/fetch）
+- **JS + JSDoc** — ESM（`"type": "module"`），不编译
+- **安全红线** — 绝不硬编码 Key，绝不在命令输出暴露 Key，路径校验门防注入
+- **TDD** — `node --test` 内置框架，先写测试再写实现
+- **错误** — 中文面向用户，三类：ClientError（不重试）/ ServerError（重试）/ NetworkError（重试）
+- **测试无真实图片** — 用例用文字描述，真实图片路径通过 env 注入
 
-- **绝不**在代码中硬编码 API Key
-- **绝不**在 Bash 命令输出中暴露 API Key（用 env 注入，不用 export）
-- **绝不**在 `.gitignore` 之外提交 `settings.json`、`.env`、日志文件
-- **必须**对图片路径做校验门检查（拒绝含 shell 元字符的路径）
-- **必须**设置请求超时（AbortController, 30s）
+## 关键文件
 
-### 代码风格
+| 文件 | 作用 | 小心 |
+|------|------|------|
+| `SKILL.md` | Skill 入口（触发词、自愈流程、执行规则） | 影响所有用户 |
+| `scripts/unblind.mjs` | CLI 入口 | 影响核心功能 |
+| `scripts/lib/orchestrator.js` | 调度核心 | 串联全链路 |
+| `scripts/lib/providers/mimo.js` | Mimo API 调用 | 影响核心功能 |
+| `install.sh` | 部署到 ~/.claude/skills/unblind/ | 影响分发 |
 
-- 保持脚本自包含——能用 Node.js 内置模块解决的问题，不引入第三方依赖
-- 错误信息面向最终用户（中文优先），给出原因 + 解决建议，不用 "Something went wrong"
-- 日志用结构化格式（JSON Lines），包含 timestamp、level、module、requestId
-- 配置变更需考虑向后兼容（version 字段 + 自动迁移逻辑）
+## 路线
 
-### 测试要求
+| Phase | 状态 |
+|-------|------|
+| 0 原型 | ✅ |
+| 1 模块化 | ✅ |
+| 2 稳定性（缓存/健康检查/CLI管理） | ✅ |
+| 3 扩展（多 Provider） | 📋 |
+| 4 多 Agent（MCP） | 📋 |
+| 5 高级功能 | 📋 |
 
-- **纯文字测试**：测试用例定义在 `tests/sample_images/`，用文字描述测试场景，**不提交真实图片**。真实图片测试在本地环境手动执行，路径通过环境变量注入。
-- 每个分析模式（describe / ocr / ui-review / chart-data / object-detect）至少一个用例
-- 自愈流程（Phase 0）全链路测试
-- 安全审计项全部通过（命令注入、Key 暴露、超时、文件大小）
-- 发布前执行完整检查清单（见 TEST.md 第 8 节）
+## 记忆文件
 
-## 当前状态与路线
-
-| 阶段 | 状态 | 关键产出 |
-|------|------|----------|
-| Phase 0（原型） | ✅ 完成 | 单文件脚本、5 种模式、自愈配置、安全加固 |
-| Phase 1（重构核心） | 📋 规划中 | 多 Provider 架构、熔断重试、凭据加密存储 |
-| Phase 2（稳定性） | 📋 规划中 | 单元测试全覆盖、缓存与健康检查、结构化日志 |
-| Phase 3（扩展性） | 📋 待实现 | DeepSeekVL/OpenAI/Local Provider |
-| Phase 4（多 Agent） | 📋 待评估 | MCP 协议适配 |
-
-## 关键文件说明
-
-| 文件 | 角色 | 修改需谨慎 |
-|------|------|-----------|
-| `SKILL.md` | Skill 入口，定义触发条件、自愈流程、执行规则 | 是 — 影响所有用户 |
-| `scripts/unblind.mjs` | 核心视觉工具，图片编码 + API 调用 | 是 — 影响核心功能 |
-| `install.sh` | 安装脚本，自动部署到 Claude Code 目录 | 是 — 影响分发 |
-| `README.md` | 用户文档（双语） | 随功能更新 |
-| `TEST.md` | 测试报告与安全检查清单 | 每次发布前更新 |
-
-## 关键约束
-
-- Skill 三级加载：元数据 < 200 tokens，说明 < 2000 tokens，资源按需
-- 仅 Claude Code 环境（不引入 MCP 协议），如需多 Agent 适配在 Phase 4 处理
-- Mimo API 使用 Anthropic Messages 兼容格式（非 Chat Completions）
-- Windows / macOS / Linux 三平台兼容
+`~/.claude/projects/D--My-Projects-unblind/memory/` — 设计决策、项目状态、文档索引，新对话自动加载。
