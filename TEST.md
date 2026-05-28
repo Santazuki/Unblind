@@ -255,3 +255,19 @@ Run these before each release:
 | 错误场景（缺失文件/无效格式/空文件） | ✅ |
 | 安全审计（命令注入/Key暴露/超时/文件大小） | ✅ |
 | 原始 unblind.mjs 行数 | 165 → 39 |
+
+## 11. Phase 2 稳定性增强 / Phase 2 Stability Enhancements (2026-05-28)
+
+| 测试项 | 结果 |
+|--------|------|
+| 单元测试总数 | 44/44 通过（+4 cache +1 CLI health -1 冗余） |
+| 缓存模块（SHA256 + mtime） | ✅ |
+| 缓存命中/过期/失效/TTL | ✅ 10/10 cache tests pass |
+| --health 健康检查 | ✅ config + api_key + api_connectivity |
+| --no-cache 跳过缓存 | ✅ |
+| 日志级别修复（module_loaded → debug） | ✅ 5 模块 |
+| install.sh 清理旧文件 | ✅ |
+| 废弃占位文件清理 | ✅ scripts/providers/, scripts/imageProcessor.js |
+| 运行时 root unblind.mjs 清理 | ✅ |
+| 零外部依赖 | ✅ |
+| 安全审计通过 | ✅ |
