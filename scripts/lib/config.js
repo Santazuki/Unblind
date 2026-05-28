@@ -120,6 +120,10 @@ export function saveConfig(updates) {
     settings.env[key] = value;
   }
 
-  writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2) + "\n", "utf8");
+  try {
+    writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2) + "\n", "utf8");
+  } catch (err) {
+    throw new Error(`配置文件写入失败: ${err.code || "未知错误"}`);
+  }
   log("info", "config", "saved", { keys: Object.keys(updates).join(", ") });
 }

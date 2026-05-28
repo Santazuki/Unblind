@@ -75,7 +75,7 @@ export function formatError(err) {
   if (err instanceof NetworkError) {
     return `🔌 网络错误：${err.reason}\n${err.suggestion}`;
   }
-  return `未知错误：${err.message}\n建议：请检查日志后重试，或提交 issue`;
+  return "未知错误，请检查日志后重试，或提交 issue";
 }
 
 log("debug", "errorHandler", "module_loaded");
