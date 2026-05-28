@@ -64,7 +64,7 @@ If `MIMO_API_KEY` is missing or empty:
    - Token Plan 订阅（tp- 开头）— https://token-plan-cn.xiaomimimo.com
    - 余额/按量付费（sk- 开头）— https://mimo.xiaomi.com
    获取后，在终端运行（替换 YOUR_KEY）：
-   node -e \"const fs=require('fs');const s=JSON.parse(fs.readFileSync(process.env.HOME+'/.claude/settings.json','utf8'));s.env.MIMO_API_KEY='YOUR_KEY';fs.writeFileSync(process.env.HOME+'/.claude/settings.json',JSON.stringify(s,null,2)+'\\n')\""
+   node -e \"const fs=require('fs');const os=require('os');const p=require('path').join(os.homedir(),'.claude','settings.json');const s=JSON.parse(fs.readFileSync(p,'utf8'));s.env.MIMO_API_KEY='YOUR_KEY';fs.writeFileSync(p,JSON.stringify(s,null,2)+'\\n')\""
 - The user runs the command in their own terminal — the key never enters the chat.
 - After the user confirms, re-read `~/.claude/settings.json` to verify the key is present.
 - Do NOT write the key yourself with the Edit tool. The key must stay out of the transcript.
