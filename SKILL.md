@@ -21,112 +21,84 @@ metadata:
     - Mimo Token Plan API key (auto-prompted on first run)
 ---
 
+<!-- LEVEL 1: Metadata above (always loaded, <200 tokens) -->
+<!-- LEVEL 2: Instructions below (loaded on trigger, <2000 tokens) -->
+
 # Unblind
 
-Intercept images before DeepSeek sees them → route to Mimo vision API → return text.
-Never pretend to see images. Never touch settings.json with Read/Edit tools.
+Intercept images → route to Mimo/OpenAI vision API → return text.
+Never pretend to see. Never Read/Edit settings.json.
 
 ## Iron Rules
 
-1. Phase 0 self-check is mandatory on every invocation
-2. NEVER use Read or Edit tool on `~/.claude/settings.json` — it would expose the API key
-3. All config checks/writes go through `node -e` Bash commands or the bundled CLI
-4. Never preamble. Never hallucinate vision. Always invoke the bundled script.
-5. The tool reads MIMO_API_KEY from env automatically (Claude Code injects it)
+1. Phase 0 mandatory on every invocation
+2. NEVER Read/Edit `~/.claude/settings.json` — API key exposure risk
+3. All config ops via Bash `node -e` or bundled CLI (`--config`, `--set-model`)
+4. Never preamble. Never hallucinate. Always invoke bundled script.
+5. Tool reads API key from env (Claude Code injects automatically)
 
-## Phase 0: Self-Healing Setup
+## Phase 0: Self-Healing (silent when healthy)
 
-### 0.1 Check health (silent when healthy)
+### 0.1 Check health
 
 ```bash
-node -e "
-const fs=require('fs');const os=require('os');
-const p=require('path').join(os.homedir(),'.claude','settings.json');
-const s=JSON.parse(fs.readFileSync(p,'utf8'));
-const issues=[];
-if(!s.env?.MIMO_API_KEY) issues.push('KEY_MISSING');
-if(!s.env?.MIMO_VISION_MODEL || s.env.MIMO_VISION_MODEL==='mimo-v2.5-pro') issues.push('MODEL_MISSING');
-const a=s.permissions?.allow||[];
-if(!a.some(x=>x.includes('unblind'))) issues.push('PERM_MISSING');
-if(issues.length) console.log(issues.join(' '));
-" 2>/dev/null
+node -e "const fs=require('fs');const os=require('os');const p=require('path').join(os.homedir(),'.claude','settings.json');const s=JSON.parse(fs.readFileSync(p,'utf8'));const issues=[];if(!s.env?.MIMO_API_KEY) issues.push('KEY_MISSING');if(!s.env?.MIMO_VISION_MODEL||s.env.MIMO_VISION_MODEL==='mimo-v2.5-pro') issues.push('MODEL_MISSING');const a=s.permissions?.allow||[];if(!a.some(x=>x.includes('unblind'))) issues.push('PERM_MISSING');if(issues.length) console.log(issues.join(' '));" 2>/dev/null
 ```
 
-If stdout is empty → healthy, **skip silently to Phase 1**.
-If stdout contains `KEY_MISSING` → go to 0.2
-If stdout contains `MODEL_MISSING` → go to 0.5
-If stdout contains `PERM_MISSING` → go to 0.4
+- Empty → healthy, **skip silently to Phase 1**
+- `KEY_MISSING` → 0.2 | `MODEL_MISSING` → 0.5 | `PERM_MISSING` → 0.4
 
 ### 0.2 Repair API Key
 
-If Key missing (`--config` shows "未设置" or errors), tell user (exact wording):
+Tell user: "Unblind 需要 Mimo API Key。获取后在终端运行（替换 YOUR_KEY）：
 
-"Unblind 需要 Mimo API Key。获取后，在终端运行（替换 YOUR_KEY）：
+node -e \"const fs=require('fs');const os=require('os');const p=require('path').join(os.homedir(),'.claude','settings.json');const s=JSON.parse(fs.readFileSync(p,'utf8'));s.env.MIMO_API_KEY='YOUR_KEY';fs.writeFileSync(p,JSON.stringify(s,null,2)+'\n')\""
 
-node -e \"const fs=require('fs');const os=require('os');const p=require('path').join(os.homedir(),'.claude','settings.json');const s=JSON.parse(fs.readFileSync(p,'utf8'));s.env.MIMO_API_KEY='YOUR_KEY';fs.writeFileSync(p,JSON.stringify(s,null,2)+'\\n')\""
-
-User runs this in their own terminal. After they confirm, re-run 0.1. Never write the key yourself.
+User runs in own terminal. Re-run 0.1 after. Never write key yourself.
 
 ### 0.3 Repair Base URL
 
-If missing, auto-detect from key prefix:
-
 ```bash
-node -e "const fs=require('fs');const os=require('os');const p=require('path').join(os.homedir(),'.claude','settings.json');const s=JSON.parse(fs.readFileSync(p,'utf8'));const k=s.env?.MIMO_API_KEY||'';const url=k.startsWith('sk-')?'https://api.xiaomimimo.com/anthropic':'https://token-plan-cn.xiaomimimo.com/anthropic';if(!s.env.MIMO_BASE_URL){s.env.MIMO_BASE_URL=url;fs.writeFileSync(p,JSON.stringify(s,null,2)+'\n')}"
+node -e "const fs=require('fs');const os=require('os');const p=require('path').join(os.homedir(),'.claude','settings.json');const s=JSON.parse(fs.readFileSync(p,'utf8'));const k=s.env?.MIMO_API_KEY||'';const u=k.startsWith('sk-')?'https://api.xiaomimimo.com/anthropic':'https://token-plan-cn.xiaomimimo.com/anthropic';if(!s.env.MIMO_BASE_URL){s.env.MIMO_BASE_URL=u;fs.writeFileSync(p,JSON.stringify(s,null,2)+'\n')}"
 ```
 
 ### 0.4 Repair permission
-
-If PERM_MISSING:
 
 ```bash
 node -e "const fs=require('fs');const os=require('os');const p=require('path').join(os.homedir(),'.claude','settings.json');const s=JSON.parse(fs.readFileSync(p,'utf8'));if(!s.permissions)s.permissions={allow:[]};const a=s.permissions.allow;if(!a.some(x=>x.includes('unblind'))){a.push('Bash(*~/.claude/skills/unblind/scripts/unblind.mjs*)');fs.writeFileSync(p,JSON.stringify(s,null,2)+'\n')}"
 ```
 
-### 0.5 Repair Vision Model
+### 0.5 Repair model | 0.6 Switch model | 0.7 Version check | 0.8 Node.js check
 
-If model missing or `mimo-v2.5-pro` (no vision support), ask:
+See `resources/troubleshooting.md` for details.
 
-"请选择视觉模型：
-1. **mimo-v2.5**（推荐）— 100/200 credits
-2. **mimo-v2-omni** — 280/1400 credits
-输入 1 或 2："
+### 0.9 All healthy → Phase 1
 
-Write choice via Bash. For choice 1:
+## Phase 1-4: Analyze Image
 
+**Phase 1:** Extract image path from `[Image: source: <path>]`. Validate: absolute path, supported ext, no shell metacharacters.
+
+**Phase 2:** Classify mode from Mode table. Default: `describe`.
+
+**Phase 3:** Execute:
 ```bash
-node -e "const fs=require('fs');const os=require('os');const p=require('path').join(os.homedir(),'.claude','settings.json');const s=JSON.parse(fs.readFileSync(p,'utf8'));s.env.MIMO_VISION_MODEL='mimo-v2.5';fs.writeFileSync(p,JSON.stringify(s,null,2)+'\n')"
+node ~/.claude/skills/unblind/scripts/unblind.mjs '<image-path>' <mode>
 ```
+No preamble. No permission prompt.
 
-For choice 2, replace `mimo-v2.5` with `mimo-v2-omni`.
+**Phase 4:** Print stdout. API key error → back to 0.2.
 
-### 0.6 Model switching (runtime)
+<!-- LEVEL 3: Resources below (loaded on-demand only) -->
 
-If user says "切换模型" / "switch model" / "换个模型": show current model (from 0.1 output), present choice prompt, write selection (same as 0.5), confirm: "已切换到 <model>。"
+## Models & Modes
 
-### 0.7 Version check
+| Model | Credits (in/out) | Vision |
+|---|---|---|
+| **mimo-v2.5** (default) | 100/200 | Yes |
+| mimo-v2-omni | 280/1400 | Yes |
+| gpt-4o (via OpenAI) | varies | Yes |
 
-```bash
-cd ~/.claude/skills/unblind && git fetch origin 2>/dev/null && git rev-list --count HEAD..origin/master 2>/dev/null || echo "0"
-```
-If > 0: "Unblind 有新版本可用（落后 <N> 个提交）。运行 `cd ~/.claude/skills/unblind && git pull` 更新。"
-
-### 0.8 Node.js check
-
-If `node --version` fails or < 18, report and stop.
-
-### 0.9 All healthy → proceed silently to Phase 1.
-
-## Models
-
-| Model | Input | Output | Vision |
-|---|---|---|---|
-| **mimo-v2.5** (default) | 100 | 200 | Yes |
-| mimo-v2-omni | 280 | 1400 | Yes |
-
-mimo-v2.5-pro has NO vision support.
-
-## Modes
+mimo-v2.5-pro has NO vision support. Never use it.
 
 | Mode | Triggers |
 |---|---|
@@ -136,24 +108,5 @@ mimo-v2.5-pro has NO vision support.
 | `chart-data` | "chart", "graph", "data", "图表" |
 | `object-detect` | "objects", "detect", "identify" |
 
-## Phase 1: Extract & validate image path
-
-From user message: `[Image: source: <absolute-path>]`
-
-Validation: absolute path, supported extension (.jpg/.jpeg/.png/.gif/.webp/.bmp/.svg), no shell metacharacters (`"`, `'`, `` ` ``, `$`, `;`, `|`, `&`, `>`, `<`, `(`, `)`, `{`, `}`, newline). Fail → "图片路径包含不安全字符，无法处理。"
-
-## Phase 2: Classify mode
-
-Match user message to Mode table above. Default: `describe`.
-
-## Phase 3: Execute
-
-```bash
-node ~/.claude/skills/unblind/scripts/unblind.mjs '<image-path>' <mode>
-```
-
-No preamble. No permission prompt. Just run.
-
-## Phase 4: Report
-
-Print stdout. If API key error → re-enter Phase 0.2.
+For detailed API docs, config guide, and troubleshooting, see `resources/best_practices.md`.
+For install guide, see README.md.

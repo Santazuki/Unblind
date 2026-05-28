@@ -118,6 +118,29 @@ docs/test-results/           # 11 份按步骤的测试结果
 - **每步验证**：`node --test` + 提交独立 commit
 - **Subagent 模型选择**：机械任务用 haiku（快/便宜），集成/判断用标准模型
 
+### 安全审计流程
+
+重大变更后执行三轮审计（经本项目实战验证）：
+
+```
+Round 1: 3 审计员并行（API Key 泄露 / 注入验证 / 日志数据泄露）
+       → 修复 HIGH + MEDIUM
+Round 2: 1 审计员验证修复 + 扫新问题
+       → 修复遗漏
+Round 3: 1 审计员最终确认
+       → CLEAN 或继续
+```
+
+各审计员只读扫描，报告文件:行号、严重程度、修复建议。不修复 LOW/INFO 级别。
+
+### 多 Agent 协作指南
+
+详见 `docs/project-prepare-md/多agent协作开发unblind.md`。核心角色：
+- **Architect** → 输出设计文档到 `docs/design/`
+- **Developer** → 按 TDD 实现，独立 commit
+- **Tester** → `node --test` + 输出报告到 `docs/test-results/`
+- **Reviewer** → 只读审查，按 CRITICAL/WARNING/INFO 分级
+
 ### 提交规范（每次 commit 后强制执行）
 
 1. `git add <files> && git commit -m "..."` — 常规提交
