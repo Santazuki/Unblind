@@ -36,12 +36,26 @@ Never pretend to see images. Never touch settings.json with Read/Edit tools.
 
 ## Phase 0: Self-Healing Setup
 
-### 0.1 Check health
+### 0.1 Check health (silent when healthy)
 
 ```bash
-node ~/.claude/skills/unblind/scripts/unblind.mjs --config 2>/dev/null
-node -e "const s=JSON.parse(require('fs').readFileSync(require('os').homedir()+'/.claude/settings.json','utf8'));const a=s.permissions?.allow||[];console.log(a.some(x=>x.includes('unblind'))?'PERM_OK':'PERM_MISSING')"
+node -e "
+const fs=require('fs');const os=require('os');
+const p=require('path').join(os.homedir(),'.claude','settings.json');
+const s=JSON.parse(fs.readFileSync(p,'utf8'));
+const issues=[];
+if(!s.env?.MIMO_API_KEY) issues.push('KEY_MISSING');
+if(!s.env?.MIMO_VISION_MODEL || s.env.MIMO_VISION_MODEL==='mimo-v2.5-pro') issues.push('MODEL_MISSING');
+const a=s.permissions?.allow||[];
+if(!a.some(x=>x.includes('unblind'))) issues.push('PERM_MISSING');
+if(issues.length) console.log(issues.join(' '));
+" 2>/dev/null
 ```
+
+If stdout is empty → healthy, **skip silently to Phase 1**.
+If stdout contains `KEY_MISSING` → go to 0.2
+If stdout contains `MODEL_MISSING` → go to 0.5
+If stdout contains `PERM_MISSING` → go to 0.4
 
 ### 0.2 Repair API Key
 
