@@ -213,9 +213,11 @@ If the tool returns an API key error, re-enter Phase 0.2.
 ~/.claude/skills/unblind/
 ├── SKILL.md                 # Agent definition + self-healing logic
 ├── README.md                # User documentation
-└── scripts/
-    ├── unblind.mjs           # CLI entry (analyze / --health / --config / --set-model)
-    └── lib/                  # Core modules (10 files, zero npm deps)
+├── scripts/
+│   ├── unblind.mjs           # CLI entry (analyze / --health / --config / --set-model)
+│   └── lib/                  # Core modules (10 files, zero npm deps)
+├── templates/               # Output format templates (on-demand)
+└── resources/               # Best practices & references (on-demand)
 ```
 
 ## Quick Install

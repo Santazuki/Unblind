@@ -26,6 +26,10 @@ deploy() {
   cp "$SOURCE_DIR/scripts/lib/"*.js "$dir/scripts/lib/"
   cp "$SOURCE_DIR/scripts/lib/providers/"*.js "$dir/scripts/lib/providers/"
 
+  # 按需资源
+  cp -r "$SOURCE_DIR/templates" "$dir/" 2>/dev/null || true
+  cp -r "$SOURCE_DIR/resources" "$dir/" 2>/dev/null || true
+
   # 清理旧版本残留
   rm -f "$dir/unblind.mjs" 2>/dev/null
   rm -f "$dir/scripts/install.js" 2>/dev/null
