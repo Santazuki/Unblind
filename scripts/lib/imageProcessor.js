@@ -1,4 +1,5 @@
-import { readFileSync, statSync } from "fs";
+import { statSync } from "fs";
+import { readFile } from "fs/promises";
 import { extname } from "path";
 import { ClientError } from "./errorHandler.js";
 import { log } from "./logger.js";
@@ -66,6 +67,8 @@ export async function processImage(imagePath, options = {}) {
     throw err;
   }
 
+  if (!fileStat.isFile()) throw new ClientError("路径不是文件");
+
   if (fileStat.size === 0) {
     throw new ClientError("图片文件为空", {
       suggestion: "请提供有效的图片文件",
@@ -81,7 +84,22 @@ export async function processImage(imagePath, options = {}) {
   }
 
   // 读取并编码
-  const imageData = readFileSync(imagePath);
+  const imageData = await readFile(imagePath);
+  // 魔数字节校验（SVG 为文本格式，跳过）
+  const magicExt = extname(imagePath).toLowerCase();
+  if (magicExt !== ".svg") {
+    const magicBuf = imageData.slice(0, 4);
+    const magic = new Uint8Array(magicBuf);
+    const isPNG  = magic[0] === 0x89 && magic[1] === 0x50 && magic[2] === 0x4E && magic[3] === 0x47;
+    const isJPEG = magic[0] === 0xFF && magic[1] === 0xD8 && magic[2] === 0xFF;
+    const isGIF  = magic[0] === 0x47 && magic[1] === 0x49 && magic[2] === 0x46 && magic[3] === 0x38;
+    const isWebP = magic[0] === 0x52 && magic[1] === 0x49 && magic[2] === 0x46 && magic[3] === 0x46;
+    const isBMP  = magic[0] === 0x42 && magic[1] === 0x4D;
+    if (!(isPNG || isJPEG || isGIF || isWebP || isBMP)) {
+      throw new ClientError("文件内容与扩展名不匹配");
+    }
+  }
+
   const mimeType = getMimeType(imagePath);
   const base64 = `data:${mimeType};base64,${imageData.toString("base64")}`;
 

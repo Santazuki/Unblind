@@ -52,7 +52,7 @@ export function loadConfig() {
   const env = settings.env || {};
 
   const config = {
-    apiKey: env.MIMO_API_KEY || "",
+    apiKey: process.env.MIMO_API_KEY || env.MIMO_API_KEY || "",
     baseUrl: env.MIMO_BASE_URL || "",
     model: env.MIMO_VISION_MODEL || "mimo-v2.5",
     maxImageSize: env.MIMO_MAX_IMAGE_SIZE
@@ -70,6 +70,7 @@ export function loadConfig() {
     cacheTTLSeconds: env.MIMO_CACHE_TTL
       ? Number(env.MIMO_CACHE_TTL)
       : DEFAULTS.cacheTTLSeconds,
+    defaultMode: env.MIMO_DEFAULT_MODE || "describe",
   };
 
   // 性能警告

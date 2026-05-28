@@ -19,7 +19,7 @@
  */
 
 import { ClientError } from "../errorHandler.js";
-import { apiRequest, apiLog } from "../httpClient.js";
+import { apiRequest } from "../httpClient.js";
 import { log } from "../logger.js";
 
 /** 5 种分析模式对应的 prompt */
@@ -75,11 +75,11 @@ export class BaseProvider {
     const startTime = Date.now();
 
     const { url, body, headers } = this._buildRequest(image, prompt || defaultPrompt, options);
-    apiLog("info", this.name, "api_call_start", { model: this._model, mode });
+    log("info", this.name, "api_call_start", { model: this._model, mode });
     const res = await apiRequest(url, { body, headers, timeoutMs: this._timeoutMs, providerName: this.name });
 
     const content = await this._parseResponse(res);
-    apiLog("info", this.name, "api_call_success", { model: this._model, mode, durationMs: Date.now() - startTime });
+    log("info", this.name, "api_call_success", { model: this._model, mode, durationMs: Date.now() - startTime });
     return { content, model: this._model, processingTimeMs: Date.now() - startTime };
   }
 

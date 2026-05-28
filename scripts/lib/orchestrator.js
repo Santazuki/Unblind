@@ -10,12 +10,25 @@ import { ClientError } from "./errorHandler.js";
 import { MODE_PROMPTS, VALID_MODES } from "./providers/provider.js";
 import { getCacheKey, get, set, getStats } from "./cache.js";
 
-/** 根据 Key 前缀创建对应 Provider */
-function createProvider(apiKey, model, timeoutMs) {
-  const baseUrl = getBaseUrl(apiKey);
-  const isOpenAI = apiKey.startsWith("sk-") && !apiKey.startsWith("sk-ant");
-  const Provider = isOpenAI ? OpenAIProvider : MimoProvider;
-  return { provider: new Provider({ apiKey, baseUrl, model, timeoutMs }), name: isOpenAI ? "openai" : "mimo" };
+/**
+ * 创建主备 Provider 对
+ * @param {string} primaryKey - 主 API Key（MIMO）
+ * @param {string} fallbackKey - 备选 API Key（OpenAI，可选）
+ * @returns {{ primary: {provider, name}, fallback: {provider, name} | null }}
+ */
+function createProvider(primaryKey, fallbackKey, model, timeoutMs) {
+  const createOne = (apiKey) => {
+    const baseUrl = getBaseUrl(apiKey);
+    const isOpenAI = apiKey.startsWith("sk-") && !apiKey.startsWith("sk-ant");
+    const Provider = isOpenAI ? OpenAIProvider : MimoProvider;
+    return { provider: new Provider({ apiKey, baseUrl, model, timeoutMs }), name: isOpenAI ? "openai" : "mimo" };
+  };
+  const primary = createOne(primaryKey);
+  let fallback = null;
+  if (fallbackKey && fallbackKey !== primaryKey) {
+    fallback = createOne(fallbackKey);
+  }
+  return { primary, fallback };
 }
 
 export async function analyze(imagePath, mode = "describe", options = {}) {
@@ -28,10 +41,12 @@ export async function analyze(imagePath, mode = "describe", options = {}) {
     });
   }
 
-  const apiKey = getApiKey();
-  if (!apiKey) {
+  const primaryKey = getApiKey();
+  const fallbackKey = process.env.OPENAI_API_KEY || "";
+
+  if (!primaryKey && !fallbackKey) {
     throw new ClientError("API Key 未配置", {
-      suggestion: "请设置 MIMO_API_KEY 环境变量或在 ~/.claude/settings.json 的 env 段中配置",
+      suggestion: "请设置 MIMO_API_KEY 或 OPENAI_API_KEY 环境变量或在 ~/.claude/settings.json 的 env 段中配置",
     });
   }
 
@@ -43,34 +58,50 @@ export async function analyze(imagePath, mode = "describe", options = {}) {
 
   if (!options.skipCache) {
     const cacheKey = getCacheKey(imageHash, prompt);
-    const cacheEntry = get(cacheKey);
+    const cacheEntry = await get(cacheKey);
     if (cacheEntry) {
-      log("info", "orchestrator", "cache_hit", { path: imagePath.slice(-30), mode, stats: getStats() });
+      log("info", "orchestrator", "cache_hit", { path: imagePath.slice(-30), mode, stats: await getStats() });
       return cacheEntry.content;
     }
   }
 
-  const { provider, name: providerName } = createProvider(apiKey, config.model, config.requestTimeoutMs);
+  const { primary, fallback } = createProvider(primaryKey, fallbackKey, config.model, config.requestTimeoutMs);
 
+  // 主 Provider
   try {
-    log("info", "orchestrator", "calling_provider", { provider: providerName, mode });
+    log("info", "orchestrator", "calling_provider", { provider: primary.name, mode });
     const result = await withRetry(
-      () => provider.analyzeImage({ image: base64, options: { mode } }),
+      () => primary.provider.analyzeImage({ image: base64, options: { mode } }),
       { ...config.retry, circuitBreaker: config.circuitBreaker }
     );
 
     log("info", "orchestrator", "analysis_complete", { mode, durationMs: result.processingTimeMs });
 
     if (!options.skipCache) {
-      set(getCacheKey(imageHash, prompt), { content: result.content }, config.cacheTTLSeconds || 3600);
+      await set(getCacheKey(imageHash, prompt), { content: result.content }, config.cacheTTLSeconds || 3600);
     }
 
     return result.content;
   } catch (err) {
-    if (err.name === "CircuitBreakerOpenError") {
-      throw new ClientError(`${providerName} 服务暂不可用（熔断保护中）`, {
-        suggestion: "当前无备选 Provider，请等待恢复后重试。系统将自动恢复。",
+    // 非客户端错误（ServerError/NetworkError/CircuitBreaker）且有备选时自动切换
+    if (fallback && err.name !== "ClientError") {
+      log("info", "orchestrator", "failing_over", {
+        from: primary.name,
+        to: fallback.name,
+        reason: err.name,
       });
+      try {
+        const result = await fallback.provider.analyzeImage({ image: base64, options: { mode } });
+        log("info", "orchestrator", "analysis_complete", { mode, durationMs: result.processingTimeMs, provider: fallback.name });
+        if (!options.skipCache) {
+          await set(getCacheKey(imageHash, prompt), { content: result.content }, config.cacheTTLSeconds || 3600);
+        }
+        return result.content;
+      } catch (fallbackErr) {
+        throw new ClientError("所有 Provider 均失败", {
+          suggestion: `主 Provider (${primary.name}): ${err.message}；备选 Provider (${fallback.name}): ${fallbackErr.message}`,
+        });
+      }
     }
     throw err;
   }
@@ -95,9 +126,9 @@ export async function runHealthCheck() {
   checks.push({ name: "api_key", pass: true, detail: `Key 前缀: ${apiKey.slice(0, 3)}...` });
 
   try {
-    const { provider, name } = createProvider(apiKey, config.model, 10_000);
-    const ok = await provider.healthCheck();
-    checks.push({ name: "api_connectivity", pass: ok, detail: ok ? `${name} API 连通正常` : `${name} API 连通失败` });
+    const { primary } = createProvider(apiKey, "", config.model, 10_000);
+    const ok = await primary.provider.healthCheck();
+    checks.push({ name: "api_connectivity", pass: ok, detail: ok ? `${primary.name} API 连通正常` : `${primary.name} API 连通失败` });
   } catch (err) {
     checks.push({ name: "api_connectivity", pass: false, detail: err.message });
   }

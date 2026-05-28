@@ -48,12 +48,12 @@ export async function withRetry(fn, options = {}) {
       const result = await fn();
 
       // 成功 → 重置
+      // HALF_OPEN 恢复：单线程 Node.js 无竞态，await fn() 期间其他调用排队
       if (circuitState === State.HALF_OPEN) {
         circuitState = State.CLOSED;
-        failureCount = 0;
         log("info", "retry", "circuit_closed_recovered");
       }
-      failureCount = 0;
+      failureCount = 0;  // 每次成功都清零（简单连续故障模型，非滑动窗口）
       return result;
 
     } catch (err) {

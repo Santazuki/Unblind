@@ -3,6 +3,7 @@ import { resolve } from "path";
 import { analyze, runHealthCheck } from "./lib/orchestrator.js";
 import { formatError } from "./lib/errorHandler.js";
 import { loadConfig, saveConfig, getSettingsPath } from "./lib/config.js";
+import { getStats, clear } from "./lib/cache.js";
 
 const VALID_MODELS = ["mimo-v2.5", "mimo-v2-omni"];
 
@@ -44,6 +45,23 @@ async function main() {
     process.exit(result.healthy ? 0 : 1);
   }
 
+  // --cache-stats
+  if (args.includes("--cache-stats")) {
+    const stats = getStats();
+    console.log("缓存统计:");
+    console.log(`  缓存条目: ${stats.size}`);
+    console.log(`  命中次数: ${stats.hits}`);
+    console.log(`  未命中次数: ${stats.misses}`);
+    process.exit(0);
+  }
+
+  // --clear-cache
+  if (args.includes("--clear-cache")) {
+    clear();
+    console.log("缓存已清除");
+    process.exit(0);
+  }
+
   // --config
   if (args.includes("--config")) {
     const cfg = loadConfig();
@@ -73,11 +91,14 @@ async function main() {
     process.exit(0);
   }
 
-  if (args.length < 1) usage();
+  const flags = args.filter(a => a.startsWith("--"));
+  const positional = args.filter(a => !a.startsWith("--"));
+  if (!positional[0]) usage();
 
-  const imagePath = resolve(args[0]);
-  const mode = args[1] || "describe";
-  const skipCache = args.includes("--no-cache");
+  const imagePath = resolve(positional[0]);
+  const cfg = loadConfig();
+  const mode = positional[1] || cfg.defaultMode || "describe";
+  const skipCache = flags.includes("--no-cache");
 
   try {
     const result = await analyze(imagePath, mode, { skipCache });

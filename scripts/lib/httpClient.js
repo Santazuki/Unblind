@@ -3,10 +3,7 @@ import { log } from "./logger.js";
 
 /**
  * 发送 API 请求，统一处理超时、错误分类、网络异常
- * @param {string} url
- * @param {{ body: object, headers?: object, timeoutMs?: number, providerName: string }} opts
- * @returns {Promise<Response>}
- * @throws {ClientError|ServerError|NetworkError}
+ * 解析 429 Retry-After 头，传递给上层重试逻辑
  */
 export async function apiRequest(url, { body, headers = {}, timeoutMs = 30_000, providerName }) {
   const controller = new AbortController();
@@ -38,7 +35,7 @@ export async function apiRequest(url, { body, headers = {}, timeoutMs = 30_000, 
   }
 }
 
-/** 根据 HTTP 状态码分类为 ClientError / ServerError */
+/** 根据 HTTP 状态码分类，429 时解析 Retry-After 头 */
 async function httpError(res, providerName) {
   const text = await res.text();
   const s = res.status;
@@ -47,23 +44,18 @@ async function httpError(res, providerName) {
     throw new ClientError(`${providerName} API Key 无效`, { statusCode: s, suggestion: "请检查 API Key 是否正确" });
   }
   if (s === 429) {
-    throw new ServerError(`${providerName} API 限流`, { statusCode: s, suggestion: "请稍后重试（系统将自动重试）" });
+    const retryAfter = res.headers.get("Retry-After");
+    const waitSec = retryAfter ? parseInt(retryAfter) : null;
+    throw new ServerError(`${providerName} API 限流`, {
+      statusCode: s,
+      retryAfterSec: waitSec,
+      suggestion: waitSec ? `请等待 ${waitSec}s 后重试` : "请稍后重试（系统将自动重试）",
+    });
   }
   if (s >= 500) {
     throw new ServerError(`${providerName} 服务异常`, { statusCode: s });
   }
   throw new ClientError(`${providerName} API 请求失败`, { statusCode: s, suggestion: text.slice(0, 200) });
-}
-
-/**
- * API 诊断日志帮助函数
- * @param {"info"|"error"} level
- * @param {string} provider
- * @param {string} event
- * @param {object} data
- */
-export function apiLog(level, provider, event, data) {
-  log(level, provider, event, data);
 }
 
 log("debug", "httpClient", "module_loaded");
