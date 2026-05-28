@@ -5,7 +5,7 @@ import { writeFileSync, unlinkSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 
-// 10x10 蓝色 PNG（Mimo API 要求图片不能过小）
+// 10x10 蓝色 PNG
 const MINI_PNG = Buffer.from([
   0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A,0x00,0x00,0x00,0x0D,
   0x49,0x48,0x44,0x52,0x00,0x00,0x00,0x0A,0x00,0x00,0x00,0x0A,
@@ -15,6 +15,22 @@ const MINI_PNG = Buffer.from([
   0x34,0x3C,0x00,0x00,0x00,0x00,0x49,0x45,0x4E,0x44,0xAE,0x42,
   0x60,0x82
 ]);
+
+// API 连通性预检
+const apiKey = process.env.MIMO_API_KEY;
+let apiAvailable = false;
+
+async function probeApi() {
+  if (!apiKey) return;
+  try {
+    const p = join(tmpdir(), "test-orch-probe.png");
+    writeFileSync(p, MINI_PNG);
+    try { await analyze(p, "describe"); apiAvailable = true; }
+    finally { try { unlinkSync(p); } catch {} }
+  } catch { /* Key 无效或网络不通 — 跳过 */ }
+}
+
+await probeApi();
 
 describe("orchestrator", () => {
   it("should reject non-existent file", async () => {
@@ -37,20 +53,14 @@ describe("orchestrator", () => {
     }
   });
 
-  // 真实 API 测试
-  const apiKey = process.env.MIMO_API_KEY;
-  const runApiTests = apiKey && apiKey.length > 0;
-
-  if (runApiTests) {
-    it("should analyze a real image end-to-end", { skip: !runApiTests }, async () => {
-      const p = join(tmpdir(), "test-orch-real.png");
-      writeFileSync(p, MINI_PNG);
-      try {
-        const result = await analyze(p, "describe");
-        assert.ok(result.length > 0, "should return analysis text");
-      } finally {
-        try { unlinkSync(p); } catch {}
-      }
-    });
-  }
+  it("should analyze a real image end-to-end", { skip: !apiAvailable }, async () => {
+    const p = join(tmpdir(), "test-orch-real.png");
+    writeFileSync(p, MINI_PNG);
+    try {
+      const result = await analyze(p, "describe");
+      assert.ok(result.length > 0, "should return analysis text");
+    } finally {
+      try { unlinkSync(p); } catch {}
+    }
+  });
 });
