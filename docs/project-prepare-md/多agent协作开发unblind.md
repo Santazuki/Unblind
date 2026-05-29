@@ -214,7 +214,7 @@ WARNING/INFO 不阻断。
 | Blackboard 同步 | 文件即状态，不实时消息 |
 | SL 只读 | 不写代码，省 Write 开销 |
 
-## 九、相关文档
+## 五、相关文档
 
 - `CLAUDE.md` — 实时状态 + 开发约定
 - `docs/design/multi-agent-usage-proof.md` — Agent 使用记录
