@@ -4,15 +4,17 @@ import { analyze, runHealthCheck } from "./lib/orchestrator.js";
 import { formatError } from "./lib/errorHandler.js";
 import { loadConfig, saveConfig } from "./lib/config.js";
 import { getStats, clear } from "./lib/cache.js";
+import { VALID_MODES } from "./lib/providers/provider.js";
 
 const VALID_MODELS = ["mimo-v2.5", "mimo-v2-omni"];
 
 function usage() {
   console.log(`Usage:
-  node unblind.mjs <image-path> [mode]     分析图片
-  node unblind.mjs --health                 健康检查
-  node unblind.mjs --config                 查看当前配置
-  node unblind.mjs --set-model <model>      切换视觉模型
+  node unblind.mjs <image-path> [mode]              分析图片
+  node unblind.mjs <img1> <img2> [...更多图片] [mode]  分析/对比图片
+  node unblind.mjs --health                          健康检查
+  node unblind.mjs --config                          查看当前配置
+  node unblind.mjs --set-model <model>               切换视觉模型
 
 Modes:
   describe     (default) 图片描述
@@ -20,9 +22,11 @@ Modes:
   ui-review    UI/UX 设计评审
   chart-data   图表数据提取
   object-detect 物体识别
+  compare      多图对比分析（需 ≥2 张图）
 
 Options:
   --no-cache   跳过缓存，强制执行 API 调用
+  --format <json|yaml|csv>  指定输出格式（追加格式指令到 prompt）
 
 Available models:
   mimo-v2.5    100/200 credits（默认，推荐）
@@ -93,15 +97,33 @@ async function main() {
 
   const flags = args.filter(a => a.startsWith("--"));
   const positional = args.filter(a => !a.startsWith("--"));
-  if (!positional[0]) usage();
-
-  const imagePath = resolve(positional[0]);
   const cfg = loadConfig();
-  const mode = positional[1] || cfg.defaultMode || "describe";
+
+  let imagePaths, mode;
+  if (positional.length > 1 && VALID_MODES.includes(positional[positional.length - 1])) {
+    mode = positional[positional.length - 1];
+    imagePaths = positional.slice(0, -1).map(p => resolve(p));
+  } else {
+    mode = cfg.defaultMode || "describe";
+    imagePaths = positional.map(p => resolve(p));
+  }
+
+  if (imagePaths.length === 0) usage();
+  if (mode === "compare" && imagePaths.length < 2) {
+    console.error("compare 模式需要至少 2 张图片");
+    process.exit(1);
+  }
+
   const skipCache = flags.includes("--no-cache");
+  const formatIdx = args.indexOf("--format");
+  const format = formatIdx >= 0 ? (args[formatIdx + 1] || "").toLowerCase() : "";
+  const validFormats = ["json", "yaml", "csv"];
+  if (format && !validFormats.includes(format)) {
+    console.warn(`未知格式: ${format}，将使用默认纯文本输出。支持: ${validFormats.join(", ")}`);
+  }
 
   try {
-    const result = await analyze(imagePath, mode, { skipCache });
+    const result = await analyze(imagePaths, mode, { skipCache, format });
     console.log(result);
   } catch (err) {
     console.error(formatError(err));

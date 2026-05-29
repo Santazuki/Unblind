@@ -10,15 +10,26 @@ export class OpenAIProvider extends BaseProvider {
 
   get name() { return "openai"; }
 
-  _buildRequest(image, prompt, options) {
+  _buildRequest(images, prompt, options) {
+    const content = [];
+
+    if (Array.isArray(images)) {
+      // Multi-image: each element is { base64, mimeType }
+      for (const img of images) {
+        content.push({ type: "image_url", image_url: { url: img.base64 } });
+      }
+    } else {
+      // Single image (backward-compatible)
+      content.push({ type: "image_url", image_url: { url: images } });
+    }
+
+    content.push({ type: "text", text: prompt });
+
     return {
       url: `${this._baseUrl}/chat/completions`,
       body: {
         model: this._model, max_tokens: options.maxSize || 2048,
-        messages: [{ role: "user", content: [
-          { type: "image_url", image_url: { url: image } },
-          { type: "text", text: prompt }
-        ]}]
+        messages: [{ role: "user", content }]
       },
       headers: { "Authorization": `Bearer ${this._apiKey}` }
     };

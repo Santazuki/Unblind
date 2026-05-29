@@ -64,8 +64,9 @@ describe("CLI", () => {
       assert.fail("should have thrown");
     } catch (e) {
       const output = (e.stderr || "") + (e.stdout || "");
-      assert.ok(output.includes("未知") || output.includes("模式"),
-        "should report unknown mode");
+      // With multi-image support, unknown positional args are treated as paths
+      assert.ok(output.includes("不支持的图片格式") || output.includes("未知") || output.includes("模式"),
+        "should report image format error or unknown mode");
     } finally {
       try { unlinkSync(p); } catch {}
     }

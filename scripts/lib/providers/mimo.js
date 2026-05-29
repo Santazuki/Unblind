@@ -11,15 +11,32 @@ export class MimoProvider extends BaseProvider {
 
   get name() { return "mimo"; }
 
-  _buildRequest(image, prompt, options) {
+  _buildRequest(images, prompt, options) {
+    const content = [];
+
+    if (Array.isArray(images)) {
+      // Multi-image: each element is { base64, mimeType }
+      for (const img of images) {
+        content.push({
+          type: "image",
+          source: { type: "base64", media_type: img.mimeType, data: this._b64(img.base64) },
+        });
+      }
+    } else {
+      // Single image (backward-compatible)
+      content.push({
+        type: "image",
+        source: { type: "base64", media_type: this._mime(images), data: this._b64(images) },
+      });
+    }
+
+    content.push({ type: "text", text: prompt });
+
     return {
       url: `${this._baseUrl}/v1/messages`,
       body: {
         model: this._model, max_tokens: options.maxSize || 2048,
-        messages: [{ role: "user", content: [
-          { type: "image", source: { type: "base64", media_type: this._mime(image), data: this._b64(image) } },
-          { type: "text", text: prompt }
-        ]}]
+        messages: [{ role: "user", content }]
       },
       headers: { "anthropic-version": "2023-06-01", ...getAuthHeader(this._apiKey) }
     };

@@ -34,6 +34,14 @@ export const MODE_PROMPTS = {
     "Extract all data from this chart or graph. List: chart title, axis labels, all data points/series with values if readable, and a brief summary of the trend.",
   "object-detect":
     "List all distinct objects, people, and activities you can identify. For each, describe what it is and its approximate location in the image.",
+  compare:
+    "You are an image comparison expert. Multiple images have been provided. "
+    + "For each image, give a brief 1-2 sentence description. "
+    + "Then analyze them together:\n"
+    + "1. **Similarities** — What visual elements, subjects, colors, layout patterns, or compositions do the images share?\n"
+    + "2. **Differences** — How do they differ in content, style, focus, quality, or structure?\n"
+    + "3. **Summary** — Synthesize the comparison into a clear conclusion.\n"
+    + "Refer to images as Image 1, Image 2, etc. when mentioning specific ones.",
 };
 
 /** 有效模式列表 */

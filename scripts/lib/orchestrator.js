@@ -9,6 +9,12 @@ import { MODE_PROMPTS, VALID_MODES } from "./providers/provider.js";
 import { getCacheKey, get, set, getStats } from "./cache.js";
 import { loadProviders } from "./providers/registry.js";
 
+const FORMAT_PROMPTS = {
+  json: "\n\nOutput the result as a single valid JSON object with keys: summary, details (array of strings). Do not wrap in markdown code blocks.",
+  yaml: "\n\nOutput the result as valid YAML with keys: summary, details. Do not wrap in markdown code blocks.",
+  csv: "\n\nOutput the result as CSV with columns: category, description. Include header row.",
+};
+
 /** 构建 Provider 链，每个 Provider 独立 CircuitBreaker */
 function buildProviderChain(config) {
   const mimoKey = getApiKey();
@@ -30,7 +36,7 @@ function buildProviderChain(config) {
 }
 
 /** 遍历 Provider 链，第一个成功即返回 */
-async function tryChain(chain, base64, mode, config) {
+async function tryChain(chain, images, mode, config, prompt) {
   const errors = [];
   for (const { provider, name, cb } of chain) {
     if (cb.state === "OPEN") {
@@ -41,7 +47,7 @@ async function tryChain(chain, base64, mode, config) {
     try {
       log("info", "orchestrator", "calling_provider", { provider: name, mode });
       const result = await withRetry(
-        () => provider.analyzeImage({ image: base64, options: { mode } }),
+        () => provider.analyzeImage({ image: images, prompt, options: { mode } }),
         { ...config.retry, circuitBreaker: cb }
       );
       log("info", "orchestrator", "analysis_complete", { mode, durationMs: result.processingTimeMs, provider: name });
@@ -57,7 +63,7 @@ async function tryChain(chain, base64, mode, config) {
   });
 }
 
-export async function analyze(imagePath, mode = "describe", options = {}) {
+export async function analyze(imagePaths, mode = "describe", options = {}) {
   const config = loadConfig();
   setLogLevel(config.logging.level);
 
@@ -74,25 +80,36 @@ export async function analyze(imagePath, mode = "describe", options = {}) {
     });
   }
 
-  log("info", "orchestrator", "processing_image", { path: imagePath.slice(-30), mode });
-  const { base64 } = await processImage(imagePath, { maxImageSize: config.maxImageSize });
+  // Normalize to array (backward-compatible with string path)
+  const paths = Array.isArray(imagePaths) ? imagePaths : [imagePaths];
 
-  const imageHash = createHash("sha256").update(base64).digest("hex");
-  const prompt = MODE_PROMPTS[mode];
+  log("info", "orchestrator", "processing_images", { path: paths.map(p => p.slice(-30)).join(", "), mode, count: paths.length });
+
+  // Batch process all images
+  const images = await Promise.all(
+    paths.map(p => processImage(p, { maxImageSize: config.maxImageSize }))
+  );
+
+  const cachePrompt = MODE_PROMPTS[mode];  // 缓存键不含格式指令，跨格式共享
+  const apiPrompt = cachePrompt + (options.format ? (FORMAT_PROMPTS[options.format] || "") : "");
+
+  // Multi-image cache key: hash all base64 concatenated (backward-compatible for single image)
+  const combinedBase64 = images.map(i => i.base64).join("::");
+  const imageHash = createHash("sha256").update(combinedBase64).digest("hex");
 
   if (!options.skipCache) {
-    const cacheKey = getCacheKey(imageHash, prompt);
+    const cacheKey = getCacheKey(imageHash, cachePrompt);
     const cacheEntry = await get(cacheKey);
     if (cacheEntry) {
-      log("info", "orchestrator", "cache_hit", { path: imagePath.slice(-30), mode, stats: await getStats() });
+      log("info", "orchestrator", "cache_hit", { path: paths.map(p => p.slice(-30)).join(", "), mode, stats: await getStats() });
       return cacheEntry.content;
     }
   }
 
-  const result = await tryChain(chain, base64, mode, config);
+  const result = await tryChain(chain, images, mode, config, apiPrompt);
 
   if (!options.skipCache) {
-    await set(getCacheKey(imageHash, prompt), { content: result.content }, config.cacheTTLSeconds || 3600);
+    await set(getCacheKey(imageHash, cachePrompt), { content: result.content }, config.cacheTTLSeconds || 3600);
   }
 
   return result.content;
