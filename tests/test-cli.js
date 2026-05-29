@@ -56,17 +56,16 @@ describe("CLI", () => {
     }
   });
 
-  it("should fail for unsupported mode", () => {
-    const p = join(tmpdir(), "test-cli.png");
-    writeFileSync(p, MINI_PNG);
+  it("should fail for invalid file format", () => {
+    const p = join(tmpdir(), "test-cli.txt");
+    writeFileSync(p, "not an image");
     try {
-      execSync(`node "${UNBLIND}" "${p}" invalid-mode`, { encoding: "utf8" });
+      execSync(`node "${UNBLIND}" "${p}"`, { encoding: "utf8" });
       assert.fail("should have thrown");
     } catch (e) {
       const output = (e.stderr || "") + (e.stdout || "");
-      // With multi-image support, unknown positional args are treated as paths
-      assert.ok(output.includes("不支持的图片格式") || output.includes("未知") || output.includes("模式"),
-        "should report image format error or unknown mode");
+      assert.ok(output.includes("不支持的图片格式") || output.includes("格式"),
+        "should report unsupported format");
     } finally {
       try { unlinkSync(p); } catch {}
     }
