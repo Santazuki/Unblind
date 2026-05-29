@@ -164,6 +164,10 @@ Round 3: 1 审计员最终确认
 - **Tester** → `node --test` + 输出报告到 `docs/test-results/`
 - **Reviewer** → 只读审查，按 CRITICAL/WARNING/INFO 分级
 
+**自动触发**：用户说"多 agent"时，必须自动派发完整角色链（Architect×N → Developer×N+Reviewer×N 交叉并行 → Tester → Fix）。不允许降级为单线开发。
+
+**交叉审查**：Developer A 的代码由 Reviewer B 审查，避免自己人审自己人。
+
 ### 提交规范（每次 commit 后强制执行）
 
 1. `git add <files> && git commit -m "..."` — 常规提交

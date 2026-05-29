@@ -134,6 +134,17 @@ Unblind 的链路是：
 
 详细报告：[docs/test-results/](docs/test-results/)
 
+## 多 Agent 协作开发
+
+本项目采用 Subagent-Driven Development 模式，经 Phase 3+5 实战验证：
+
+- **Architect ×N**：并行设计，输出到 `docs/design/`
+- **Developer + Reviewer 并行**：交叉审查，边开发边把关
+- **Tester**：全量回归 + 测试报告 `docs/test-results/`
+- **自动触发**：说"多 agent"即派发完整角色链，不漏角色
+
+详见 [docs/project-prepare-md/多agent协作开发unblind.md](docs/project-prepare-md/多agent协作开发unblind.md)
+
 ## GPT 的质疑 & Claude Code 的回应
 
 我们用 GPT 对项目进行了一次"刻薄审计"，它提出了 20 条潜在问题（功能缺陷 + 安全漏洞）。然后用 Claude Code 逐条实测：
