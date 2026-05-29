@@ -67,6 +67,9 @@ bash /tmp/unblind/install.sh
 | Architect | 并行设计，输出 `docs/design/` | deepseek-v4-pro |
 | Developer + Reviewer | 交叉审查，边开发边把关 | v4-flash / v4-pro |
 | Tester | 全量回归 + `docs/test-results/` 报告 | v4-flash |
+| Security Expert | 启发性漏洞预判 + 攻击面分析 | v4-pro |
+| Test Engineer | 安全测试脚本 + 边缘覆盖 | v4-flash |
+| DevOps Engineer | CI/CD + 版本管理 + 部署验证 | v4-pro |
 
 ### 工程纪律
 

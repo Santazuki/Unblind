@@ -168,6 +168,9 @@ Round 3: 1 审计员最终确认
 - **Developer** → 按 TDD 实现，独立 commit
 - **Tester** → `node --test` + 输出报告到 `docs/test-results/`
 - **Reviewer** → 只读审查，按 CRITICAL/WARNING/INFO 分级
+- **Security Expert** → 启发性漏洞预判、攻击面分析
+- **Test Engineer** → 安全测试脚本、边缘场景覆盖
+- **DevOps Engineer** → CI/CD 修复、版本管理、部署验证
 
 **自动触发**：用户说"多 agent"时，必须自动派发完整角色链（Architect×N → Developer×N+Reviewer×N 交叉并行 → Tester → Fix）。不允许降级为单线开发。
 

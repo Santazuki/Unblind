@@ -87,19 +87,31 @@ export async function processImage(imagePath, options = {}) {
 
   // 读取并编码
   const imageData = await readFile(imagePath);
-  // 魔数字节校验（SVG 为文本格式，跳过）
+  // 魔数字节校验
   const magicExt = extname(imagePath).toLowerCase();
-  if (magicExt !== ".svg") {
-    const magicBuf = imageData.slice(0, 4);
-    const magic = new Uint8Array(magicBuf);
-    const isPNG  = magic[0] === 0x89 && magic[1] === 0x50 && magic[2] === 0x4E && magic[3] === 0x47;
-    const isJPEG = magic[0] === 0xFF && magic[1] === 0xD8 && magic[2] === 0xFF;
-    const isGIF  = magic[0] === 0x47 && magic[1] === 0x49 && magic[2] === 0x46 && magic[3] === 0x38;
-    const isWebP = magic[0] === 0x52 && magic[1] === 0x49 && magic[2] === 0x46 && magic[3] === 0x46;
-    const isBMP  = magic[0] === 0x42 && magic[1] === 0x4D;
-    if (!(isPNG || isJPEG || isGIF || isWebP || isBMP)) {
-      throw new ClientError("文件内容与扩展名不匹配");
-    }
+  const magicBuf = imageData.slice(0, 8);
+  const magic = new Uint8Array(magicBuf);
+  let valid = false;
+
+  if (magicExt === ".svg") {
+    // SVG: 验证以 <?xml 或 <svg 开头（去除 BOM 和空白）
+    const head = imageData.toString("utf8", 0, 128).trim();
+    valid = /^<(\?xml|svg)/i.test(head);
+  } else if (magicExt === ".jpg" || magicExt === ".jpeg") {
+    valid = magic[0] === 0xFF && magic[1] === 0xD8 && magic[2] === 0xFF;
+  } else if (magicExt === ".png") {
+    valid = magic[0] === 0x89 && magic[1] === 0x50 && magic[2] === 0x4E && magic[3] === 0x47;
+  } else if (magicExt === ".gif") {
+    valid = magic[0] === 0x47 && magic[1] === 0x49 && magic[2] === 0x46 && magic[3] === 0x38;
+  } else if (magicExt === ".webp") {
+    valid = magic[0] === 0x52 && magic[1] === 0x49 && magic[2] === 0x46 && magic[3] === 0x46
+         && magic[8] === 0x57 && magic[9] === 0x45 && magic[10] === 0x42 && magic[11] === 0x50;
+  } else if (magicExt === ".bmp") {
+    valid = magic[0] === 0x42 && magic[1] === 0x4D;
+  }
+
+  if (!valid) {
+    throw new ClientError("文件内容与扩展名不匹配");
   }
 
   const mimeType = getMimeType(imagePath);
