@@ -148,19 +148,89 @@ model: deepseek-v4-pro
 ## 四、完整流程
 
 ```
-用户需求
-  ↓
-Part 1: Architect → Developer + Reviewer（交叉审查）→ 问题清单
-  ↓
-Part 2: Security Lead → QA Engineer → Reliability Engineer
-           ↑_________________________________↓ (循环至 CLEAN)
-  ↓
-提交 + CLAUDE.md 自动更新 + 记忆持久化
+你（Leader）提需求
+      ↓
+PM Agent 派发任务
+      ↓
+┌─ Part 1 ──────────────────────────────────────┐
+│  Architect → docs/design/<feature>.md          │
+│      ↓                ↓                        │
+│      │        Security Lead 并行审查设计        │   ← 安全左移
+│      │                │                        │
+│      │         设计安全问题? → 回 Architect     │
+│      ↓                                         │
+│  Developer ×N ──→ 代码变更                     │
+│      ↓                                         │
+│  Reviewer ×N (交叉审查)                         │
+│      ↓                                         │
+│  ├─ CRITICAL? → 阻断 Part 2，回 Developer      │
+│  ├─ 代码问题 → Developer 修复                  │
+│  └─ 功能问题 → 问题清单 → 传递给 Part 2        │
+└────────────────────────────────────────────────┘
+      ↓
+┌─ Part 2: Quality Gate ────────────────────────┐
+│  Security Lead (汇总攻击面 + 功能问题)          │
+│      ↓                                         │
+│  QA Engineer → node --test                     │
+│      ├─ PASS → 报告                            │
+│      └─ FAIL → RE 诊断                         │
+│           ├─ 可修(配置/环境/测试) → 修复       │
+│           ├─ 代码bug → 退回 Part 1 Developer   │
+│           └─ 设计缺陷 → 退回 Part 1 Architect  │
+│      ↓                                         │
+│  QA 重测 (≤3轮)                                 │
+│      ↓                                         │
+│  3轮后仍失败:                                   │
+│      ├─ 非阻塞 → known-issues.md → CLEAN       │
+│      └─ 阻塞性 → 通知你(Leader)决策            │
+│      ↓                                         │
+│  Security Lead 最终评估 → CLEAN                │
+└────────────────────────────────────────────────┘
+      ↓
+提交 + CLAUDE.md 更新 + 记忆持久化
 ```
 
-**自动触发**：用户说"多 agent"即启动完整双 pipeline，不遗漏任何角色。
+## 五、PM 关口（保证流程执行）
 
-**Token 优化**：Reviewer 输出复用给 Security Lead、Architect 只读设计、串行仅在依赖处。
+PM Agent 在 5 个关口逐项查验，不满足不派下一个 Agent：
+
+| 关口 | 前置条件 | 不满足时 |
+|------|---------|---------|
+| G1 | Architect 输出了 `docs/design/<feature>.md` | 等 Architect 完成 |
+| G2 | SL 输出设计审查意见 | 设计安全问题回 Architect |
+| G3 | Reviewer 无 CRITICAL | 阻断 Part 2，回 Developer |
+| G4 | QA 全量测试 PASS | 派 RE 修复（≤3轮） |
+| G5 | 3轮后 SL 判定阻塞性 | 通知 Leader 决策 |
+
+## 六、回退规则
+
+| 失败类型 | 谁修 | 回退到 |
+|---------|------|--------|
+| CI 配置 / 环境 / 版本 | RE | 本轮继续 |
+| 测试断言过时 | RE | 本轮继续 |
+| 代码逻辑 bug | Developer | Part 1 |
+| 设计缺陷 / 接口断裂 | Architect | Part 1 从头开始 |
+
+## 七、CRITICAL 阻断规则
+
+Reviewer 发现以下任一 → **阻断 Part 2**：
+
+| 类型 | 示例 |
+|------|------|
+| 安全漏洞 | 硬编码 Key、注入点 |
+| 逻辑错误 | 数据损坏、状态机错误 |
+| 接口断裂 | Provider 签名变更未同步 |
+
+WARNING/INFO 不阻断。
+
+## 八、Token 优化
+
+| 策略 | 说明 |
+|------|------|
+| SL+Architect 并行 | 同读设计文档，不额外等待 |
+| Review 输出复用 | 问题清单直喂 Security Lead |
+| Blackboard 同步 | 文件即状态，不实时消息 |
+| SL 只读 | 不写代码，省 Write 开销 |
 
 ## 五、相关文档
 
