@@ -77,6 +77,7 @@ bash /tmp/unblind/install.sh
 - **三轮安全审计**：并行扫描 → 修复 HIGH+MEDIUM → 验证 → CLEAN
 - **CLAUDE.md 自动更新**：新 Phase/方向变化/重构完成时强制同步
 - **记忆文件**：`~/.claude/projects/.../memory/` 持久化，新对话自动加载
+- **安全→测试→运维 协作循环**：安全专家给方向 → 测试写用例 → 运维修复 → 重新评估，循环至 CLEAN
 
 📄 [多Agent协作指南](docs/project-prepare-md/多agent协作开发unblind.md) · [Agent使用证明](docs/design/multi-agent-usage-proof.md)
 
@@ -183,6 +184,7 @@ brainstorm → spec → plan → subagent(implement+review) → audit → memory
 - **3-round security audit**: parallel scan → fix → verify → CLEAN
 - **CLAUDE.md**: auto-updates on phase changes / refactors
 - **Memory files**: persist across conversations
+- **Security→Test→DevOps cycle**: security directs → tests written → devops fixes → re-evaluate, loop to CLEAN
 
 [Multi-Agent Guide](docs/project-prepare-md/多agent协作开发unblind.md) · [Agent Proof](docs/design/multi-agent-usage-proof.md)
 

@@ -161,6 +161,19 @@ Round 3: 1 审计员最终确认
 
 各审计员只读扫描，报告文件:行号、严重程度、修复建议。不修复 LOW/INFO 级别。
 
+### 安全→测试→运维 协作循环
+
+```
+Security Expert（方向）→ Test Engineer（测试）→ DevOps Engineer（修复）
+       ↑                                                    ↓
+       └──────────── 重新评估 ←──── 重新测试 ←──────────────┘
+```
+
+1. **Security Expert** 给出方向：攻击面分析、漏洞预判
+2. **Test Engineer** 编写安全测试并运行
+3. **DevOps Engineer** 修复失败项，循环直到全绿
+4. **Security Expert** 重新评估，仍有问题则重复整个流程
+
 ### 多 Agent 协作指南
 
 详见 `docs/project-prepare-md/多agent协作开发unblind.md`。核心角色：
