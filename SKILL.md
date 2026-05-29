@@ -13,6 +13,8 @@ metadata:
   requirements:
     - Node.js >= 18
     - Mimo or OpenAI API key (auto-prompted on first run)
+compatibility: Claude Code (bundled script, zero npm deps)
+allowed-tools: Bash(node ~/.claude/skills/unblind/scripts/unblind.mjs:*)
 ---
 
 <!-- LEVEL 1: Metadata above (~180 tokens, always loaded) -->
@@ -29,6 +31,20 @@ Route images to vision API. Never pretend to see. Never Read/Edit settings.json.
 3. Config via CLI (`--config`, `--set-model`) or `node -e`, never via tools
 4. Never preamble. Never hallucinate. Always invoke bundled script.
 5. Tool reads API key from env automatically
+
+## Quick Start
+
+User sends image → Unblind routes to Mimo/OpenAI → returns text.
+Example: "What's in this screenshot?" → OCR mode extracts all text.
+Example: "Review this UI design" → ui-review mode critiques layout/UX.
+
+## Edge Cases
+
+- API key expired/missing → Phase 0.2 prompts user to set it
+- Image >50MB → rejected with size limit + compression suggestion
+- Unsupported format → rejected with list of 7 supported formats
+- Both providers fail → automatic Mimo→OpenAI fallback, clean error if both down
+- Malicious path input → metacharacter gate rejects before execution
 
 ## Phase 0: Self-Healing
 

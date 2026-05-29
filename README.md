@@ -12,7 +12,7 @@
 
 DeepSeek（v4 / v4-pro / v4-flash）是目前最强的推理模型之一，但它没有多模态能力——发图片只会得到 "Unsupported Image"。
 
-Unblind 是一个**自愈型 Claude Code Agent Skill**。当 DeepSeek 收到图片时，Unblind 自动拦截，将图片路由到 Mimo / OpenAI 视觉模型，返回文字描述。对用户来说，DeepSeek 像是突然学会了看图。
+Unblind 是一个**自愈型 Claude Code Agent Skill**，遵循 [agentskills.io](https://agentskills.io) 规范。当 DeepSeek 收到图片时，Unblind 自动拦截，将图片路由到 Mimo / OpenAI 视觉模型，返回文字描述。对用户来说，DeepSeek 像是突然学会了看图。
 
 > **Mimo 补上了 DeepSeek 缺失的多模态能力。**
 > 小米 Mimo Token Plan 提供 Anthropic 兼容 API，原生支持图片理解。

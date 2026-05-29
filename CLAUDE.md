@@ -2,6 +2,7 @@
 
 > Claude Code Agent Skill，为 DeepSeek 等纯文本模型提供视觉能力。图片 → Mimo API → 文字描述。
 > 核心哲学：自行车道不是高速公路。零 npm 依赖，克隆即用。
+> 遵循 [agentskills.io](https://agentskills.io) 规范：三级渐进披露、allowed-tools、scenarios 测试。
 
 ## 当前状态
 
