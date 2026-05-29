@@ -115,6 +115,8 @@ resources/troubleshooting.md # Phase 0 修复命令、常见错误
 
 每次 `git commit` 后自问："CLAUDE.md 还准确吗？"→ 不准确立即修。
 
+**每次批量提交后，必须检查 GitHub Actions CI 状态。如有失败，立即修复并重新提交，直到 CI 通过。**
+
 ## 记忆维护策略
 
 | 触发条件 | 操作 |
