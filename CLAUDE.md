@@ -61,7 +61,7 @@ resources/troubleshooting.md # Phase 0 修复命令、常见错误
 | 0 原型 | ✅ |
 | 1 模块化 | ✅ |
 | 2 稳定性（缓存/健康检查/CLI管理） | ✅ |
-| 3 扩展（多 Provider） | 🔄 OpenAI ✅ · DeepSeekVL 📋 · Ollama 📋 |
+| 3 扩展（多 Provider） | ✅ Mimo→OpenAI→Ollama 链式轮换 |
 | 4 多 Agent（MCP） | ⏭️ 跳过（设计决策：自行车道不修高速） |
 | 5 高级功能 | 📋 |
 

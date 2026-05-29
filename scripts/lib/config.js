@@ -73,6 +73,7 @@ export function loadConfig() {
     defaultMode: env.MIMO_DEFAULT_MODE || "describe",
     ollamaUrl: env.OLLAMA_BASE_URL || "",
     ollamaModel: env.OLLAMA_MODEL || "",
+    providerOrder: env.UNBLIND_PROVIDER_ORDER || "mimo,openai,ollama",
   };
 
   // 性能警告

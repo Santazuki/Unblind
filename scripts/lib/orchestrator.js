@@ -15,13 +15,13 @@ import { getCacheKey, get, set, getStats } from "./cache.js";
  * 每个 Provider 有独立 CircuitBreaker，熔断自动跳过
  */
 function buildProviderChain(config) {
-  const chain = [];
+  const all = new Map();
   const timeoutMs = config.requestTimeoutMs;
 
   // Mimo (tp-/sk-ant Key)
   const mimoKey = getApiKey();
   if (mimoKey) {
-    chain.push({
+    all.set("mimo", {
       provider: new MimoProvider({ apiKey: mimoKey, baseUrl: getBaseUrl(mimoKey), model: config.model, timeoutMs }),
       name: "mimo",
       cb: new CircuitBreaker({ failureThreshold: 5, timeoutSeconds: 60 }),
@@ -32,7 +32,7 @@ function buildProviderChain(config) {
   const openaiKey = process.env.OPENAI_API_KEY || "";
   if (openaiKey) {
     const oaiModel = process.env.OPENAI_VISION_MODEL || "gpt-4o";
-    chain.push({
+    all.set("openai", {
       provider: new OpenAIProvider({ apiKey: openaiKey, model: oaiModel, timeoutMs }),
       name: "openai",
       cb: new CircuitBreaker({ failureThreshold: 5, timeoutSeconds: 60 }),
@@ -43,14 +43,16 @@ function buildProviderChain(config) {
   const ollamaUrl = config.ollamaUrl || process.env.OLLAMA_BASE_URL;
   if (ollamaUrl) {
     const ollamaModel = config.ollamaModel || process.env.OLLAMA_MODEL || "llava";
-    chain.push({
+    all.set("ollama", {
       provider: new OpenAIProvider({ apiKey: "ollama", baseUrl: ollamaUrl, model: ollamaModel, timeoutMs }),
       name: "ollama",
       cb: new CircuitBreaker({ failureThreshold: 3, timeoutSeconds: 30 }),
     });
   }
 
-  return chain;
+  // 按 UNBLIND_PROVIDER_ORDER 排序
+  const order = config.providerOrder.split(",").map(s => s.trim());
+  return order.filter(name => all.has(name)).map(name => all.get(name));
 }
 
 /** 遍历 Provider 链，第一个成功即返回 */
