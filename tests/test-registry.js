@@ -81,70 +81,39 @@ describe("registry", () => {
   });
 });
 
-import { REGISTRY_V3, loadProvidersV3 } from "../scripts/lib/providers/registry.js";
+import { REGISTRY } from "../scripts/lib/providers/registry.js";
 import { PROTOCOLS } from "../scripts/lib/providers/protocols.js";
 
-describe("registry v3", () => {
-  describe("REGISTRY_V3 data integrity", () => {
-    it("should have 7 entries", () => {
-      assert.equal(REGISTRY_V3.length, 7);
-    });
-
-    it("each entry should have required fields", () => {
-      for (const entry of REGISTRY_V3) {
-        assert.ok(entry.name);
-        assert.ok(entry.protocol);
-        assert.ok(entry.envKey);
-        assert.ok(typeof entry.baseUrl === "string" || entry.baseUrl === "");
-        assert.ok(entry.model);
-        assert.ok(entry.limits && typeof entry.limits === "object");
-      }
-    });
-
-    it("each protocol reference should exist in PROTOCOLS", () => {
-      for (const entry of REGISTRY_V3) {
-        assert.ok(PROTOCOLS[entry.protocol], `${entry.name} protocol "${entry.protocol}" exists`);
-      }
-    });
-
-    it("all names must be unique", () => {
-      const names = REGISTRY_V3.map(e => e.name);
-      assert.equal(new Set(names).size, names.length);
-    });
-
-    it("only groq has overrides", () => {
-      const withOverrides = REGISTRY_V3.filter(e => e.overrides && Object.keys(e.overrides).length > 0);
-      assert.equal(withOverrides.length, 1);
-      assert.equal(withOverrides[0].name, "groq");
-    });
+describe("REGISTRY data integrity", () => {
+  it("should have 7 entries", () => {
+    assert.equal(REGISTRY.length, 7);
   });
 
-  describe("loadProvidersV3", () => {
-    it("should return empty array when no keys configured", () => {
-      withEnv({ OPENAI_API_KEY: null, MIMO_API_KEY: null, OLLAMA_BASE_URL: null }, () => {
-        const result = loadProvidersV3("openai,mimo,ollama", { timeoutMs: 5000 });
-        assert.equal(result.length, 0);
-      });
-    });
+  it("each entry should have required fields", () => {
+    for (const entry of REGISTRY) {
+      assert.ok(entry.name);
+      assert.ok(entry.protocol);
+      assert.ok(entry.envKey);
+      assert.ok(typeof entry.baseUrl === "string" || entry.baseUrl === "");
+      assert.ok(entry.model);
+      assert.ok(entry.limits && typeof entry.limits === "object");
+    }
+  });
 
-    it("should return providers with keys set", () => {
-      withEnv({ OPENAI_API_KEY: "sk-test", MIMO_API_KEY: null }, () => {
-        const result = loadProvidersV3("openai", { timeoutMs: 5000 });
-        assert.equal(result.length, 1);
-        assert.equal(result[0].name, "openai");
-      });
-    });
+  it("each protocol reference should exist in PROTOCOLS", () => {
+    for (const entry of REGISTRY) {
+      assert.ok(PROTOCOLS[entry.protocol], `${entry.name} protocol "${entry.protocol}" exists`);
+    }
+  });
 
-    it("should respect provider order", () => {
-      withEnv({ OPENAI_API_KEY: "sk-test", MIMO_API_KEY: "tp-test" }, () => {
-        const a = loadProvidersV3("openai,mimo", { timeoutMs: 5000 });
-        assert.equal(a[0].name, "openai");
-        assert.equal(a[1].name, "mimo");
+  it("all names must be unique", () => {
+    const names = REGISTRY.map(e => e.name);
+    assert.equal(new Set(names).size, names.length);
+  });
 
-        const b = loadProvidersV3("mimo,openai", { timeoutMs: 5000 });
-        assert.equal(b[0].name, "mimo");
-        assert.equal(b[1].name, "openai");
-      });
-    });
+  it("only groq has overrides", () => {
+    const withOverrides = REGISTRY.filter(e => e.overrides && Object.keys(e.overrides).length > 0);
+    assert.equal(withOverrides.length, 1);
+    assert.equal(withOverrides[0].name, "groq");
   });
 });
