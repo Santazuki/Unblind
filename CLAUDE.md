@@ -165,13 +165,24 @@ Round 3: 1 审计员最终确认
 
 ### Quality Gate 协作循环
 
+**PM Agent 硬约束：以下角色必须通过 Agent 工具派发独立 Agent 执行，PM 不得亲自替代。违规则关口无效。**
+
+| 角色 | 派发时机 | 原因 |
+|------|----------|------|
+| Security Lead | G2(审设计) + Part2(攻击面汇总+最终评估) | PM 审自己的设计=盲区 |
+| Reviewer | G3 交叉审查 | 独立视角是审查唯一价值 |
+| QA Engineer | Part2 全量测试 | 测试和修 bug 不能同一人 |
+| Reliability Engineer | Part2 修复失败项 | 同上 |
+
+**自检**：每关完成后 PM 自问"这关是独立 Agent 做的还是我自己做的？"→ 自己做的立即补派。
+
 ```
 Security Lead (方向) → QA Engineer (测试) → Reliability Engineer (修复)
       ↑                                                    ↓
       └────────── 重新评估 ←────── 重测 (≤3轮) ←──────────┘
 ```
 
-1. **Security Lead** 攻击面分析 + 审查 Architect 设计（安全左移）
+1. **Security Lead** 攻击面分析 + 审查 Architect 设计（安全左移，G2 首次 + Part2 最终）
 2. **QA Engineer** 全量回归 + 安全测试 + 边缘场景
 3. **Reliability Engineer** 修复失败项（配置/环境/测试），代码bug 回 Developer
 4. **3 轮上限**：仍失败 → Security Lead 判定阻塞性 → 通知 Leader 或记录技术债
@@ -181,9 +192,10 @@ Security Lead (方向) → QA Engineer (测试) → Reliability Engineer (修复
 
 详见 `docs/project-prepare-md/多agent协作开发unblind.md`。角色分工：
 - **你（用户）**：Team Leader，讨论需求、审核方向、最终决策
-- **PM Agent（我）**：理解需求 → 派发任务 → 5 个关口逐项查验 → 控制流程。Architect 设计未出不等 Developer。Reviewer 有 CRITICAL 阻断 Part 2。QA 失败 3 轮通知 Leader。
+- **PM Agent（我）**：理解需求 → 派发任务 → 5 个关口逐项查验 → 控制流程。**不得亲自执行 SL/Reviewer/QA/RE 角色工作**。Architect 设计未出不等 Developer。Reviewer 有 CRITICAL 阻断 Part 2 并回退 Developer。QA 失败 3 轮通知 Leader。
 - **Subagent 6 角色**：Part 1(Architect→Developer+Reviewer, SL 并行审设计) + Part 2(SL→QA→RE 循环≤3轮)
 - **自动触发**：说"多 agent"即启动完整双 pipeline，不漏角色。
+- **G3 Reviewer 分工**：3 个 Reviewer 各负责不同维度（安全/代码质量/集成），缩小审查范围避免重复。`CRITICAL` 发现 → 阻断 Part 2 → 退回 Developer 修复 → Reviewer 复审查 → 确认 CLEAN 后才进 Part 2。
 
 ### 提交规范（每次 commit 后强制执行）
 

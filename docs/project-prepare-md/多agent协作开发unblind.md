@@ -85,11 +85,24 @@ model: deepseek-v4-pro
 ---
 ```
 
-输出格式：`[CRITICAL/WARNING/INFO] 文件:行号 — 问题描述 — 修复建议`
+**分工策略**：3 个 Reviewer 各负责一个维度，不交叉覆盖，缩小审查范围加速执行。
 
-两类输出：
-- **功能问题** → 传递给 Part 2 Security Lead
-- **代码质量问题** → Developer 直接修复
+| Reviewer | 审查维度 | 关注点 |
+|----------|----------|--------|
+| #1 安全 | API Key 泄露、硬编码 Key、注入、错误消息泄露 | 安全红线 5 条 |
+| #2 代码质量 | 接口一致性、DRY、overrides 机制、向后兼容 | 逻辑正确性 |
+| #3 集成 | Provider 数据一致性、开关行为、调用链兼容 | 端到端链路 |
+
+输出格式：`[CRITICAL/HIGH/MEDIUM] 文件:行号 — 问题描述 — 修复建议`
+
+**CRITICAL 处理流程**：
+1. Reviewer 发现 CRITICAL → 阻断 Part 2
+2. PM 将对应 Developer 任务标记为 in_progress
+3. Developer 修复 → 提交
+4. **同一 Reviewer 复审查** → 确认 CRITICAL 已消除
+5. 才可进入 Part 2
+
+WARNING/INFO 不阻断。
 
 ## 三、Part 2: Quality Gate — Guardian Trio（循环）
 
@@ -111,13 +124,20 @@ Security Lead（最终评估）
 ```yaml
 ---
 name: security-lead
-description: 安全负责人，启发性漏洞预判、攻击面分析、最终评估、协调功能问题修复。
+description: 安全负责人，启发性漏洞预判、攻击面分析、最终评估。
 tools: Read, Grep, Glob
 model: deepseek-v4-pro
 ---
 ```
 
-职责：方向制定 → 接收 Reviewer 功能问题 → 最终评估 → CLEAN 或重开循环。
+**双重出场**：SL 在两个关口出现，不可合并或跳过。
+
+| 出场 | 时机 | 职责 |
+|------|------|------|
+| **G2** | Architect 设计完成后 | 审查设计安全（安全左移），输出文件:行号+严重度 |
+| **Part 2** | QA 测试通过后 | 汇总攻击面 → 最终评估 → CLEAN 或重开循环 |
+
+职责：G2 审设计安全 → Part 2 汇总攻击面 → 最终评估 → CLEAN 或重开循环。
 
 ### QA Engineer
 
@@ -197,10 +217,23 @@ PM Agent 在 5 个关口逐项查验，不满足不派下一个 Agent：
 | 关口 | 前置条件 | 不满足时 |
 |------|---------|---------|
 | G1 | Architect 输出了 `docs/design/<feature>.md` | 等 Architect 完成 |
-| G2 | SL 输出设计审查意见 | 设计安全问题回 Architect |
-| G3 | Reviewer 无 CRITICAL | 阻断 Part 2，回 Developer |
-| G4 | QA 全量测试 PASS | 派 RE 修复（≤3轮） |
-| G5 | 3轮后 SL 判定阻塞性 | 通知 Leader 决策 |
+| G2 | **独立 SL Agent** 输出设计审查意见 | 设计安全问题回 Architect |
+| G3 | **独立 Reviewer Agent** 无 CRITICAL | 阻断 Part 2，回 Developer，同一 Reviewer 复审查 |
+| G4 | **独立 QA Agent** 全量测试 PASS | 派 RE 修复（≤3轮） |
+| G5 | 3轮后 **独立 SL Agent** 判定阻塞性 | 通知 Leader 决策 |
+
+### PM 硬约束
+
+**PM Agent 禁止亲自执行以下角色，必须通过 Agent 工具派发独立 Agent。违规则关口无效。**
+
+| 角色 | 工具 | 触发时机 | 违规自检 |
+|------|------|----------|----------|
+| Security Lead | `Agent(subagent_type="Explore")` | G2(审设计) + Part2(攻击面+评估) | "SL 报告是我写的还是独立 Agent 写的？" |
+| Reviewer | `Agent(subagent_type="Explore")` | G3(交叉审查) | "审查结论是我 grep 出来的还是独立 Agent 出的？" |
+| QA Engineer | `Agent` | Part2(全量测试) | "测试是我跑的 node --test 还是独立 Agent 跑的？" |
+| Reliability Engineer | `Agent` | Part2(修复失败) | "修复是独立 Agent 做的还是我手动改的？" |
+
+**为什么**：审查、测试、安全判定的价值在于**独立视角**。PM 自己审自己派的活 = 盲区。这是双 Pipeline 模式的核心保障。
 
 ## 六、回退规则
 
