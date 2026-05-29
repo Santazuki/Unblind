@@ -50,17 +50,32 @@ git clone https://github.com/Santazuki/unblind.git /tmp/unblind
 bash /tmp/unblind/install.sh
 ```
 
-## 多 Agent 协作开发
+## 开发流程
 
-本项目是 **Subagent-Driven Development** 的实战案例。25+ AI Agent 按角色协作：
+本项目全程使用 **Claude Code + Subagent-Driven Development**，25+ AI Agent 协作。
+
+### 方法论
+
+```
+需求 → brainstorm → spec → plan → subagent → audit → memory
+```
+
+### 多 Agent 角色
 
 | 角色 | 职责 | 模型 |
 |------|------|------|
-| Architect | 并行设计，输出到 `docs/design/` | deepseek-v4-pro |
+| Architect | 并行设计，输出 `docs/design/` | deepseek-v4-pro |
 | Developer + Reviewer | 交叉审查，边开发边把关 | v4-flash / v4-pro |
-| Tester | 全量回归 + 测试报告 | v4-flash |
+| Tester | 全量回归 + `docs/test-results/` 报告 | v4-flash |
 
-📄 [多Agent协作开发指南](docs/project-prepare-md/多agent协作开发unblind.md) | [Agent使用证明](docs/design/multi-agent-usage-proof.md)
+### 工程纪律
+
+- **TDD**：`node --test` 驱动实现，93 tests CI 实跑
+- **三轮安全审计**：并行扫描 → 修复 HIGH+MEDIUM → 验证 → CLEAN
+- **CLAUDE.md 自动更新**：新 Phase/方向变化/重构完成时强制同步
+- **记忆文件**：`~/.claude/projects/.../memory/` 持久化，新对话自动加载
+
+📄 [多Agent协作指南](docs/project-prepare-md/多agent协作开发unblind.md) · [Agent使用证明](docs/design/multi-agent-usage-proof.md)
 
 ## 自动化验证
 
@@ -146,9 +161,23 @@ Send this to Claude Code:
 
 Or manually: `git clone ... && bash install.sh`
 
-## Multi-Agent Development
+## Dev Process
 
-This project is a real-world case study in Subagent-Driven Development. 25+ AI agents collaborated across the full development lifecycle. [Proof doc](docs/design/multi-agent-usage-proof.md)
+Built with **Claude Code + Subagent-Driven Development**, 25+ AI agents collaborating under a structured workflow:
+
+```
+brainstorm → spec → plan → subagent(implement+review) → audit → memory
+```
+
+- **Architect ×N** (parallel) → `docs/design/`
+- **Developer + Reviewer** (cross-review, parallel)
+- **Tester** → `docs/test-results/`
+- **TDD**: `node --test`, 93 tests in CI
+- **3-round security audit**: parallel scan → fix → verify → CLEAN
+- **CLAUDE.md**: auto-updates on phase changes / refactors
+- **Memory files**: persist across conversations
+
+[Multi-Agent Guide](docs/project-prepare-md/多agent协作开发unblind.md) · [Agent Proof](docs/design/multi-agent-usage-proof.md)
 
 ## Validation
 
