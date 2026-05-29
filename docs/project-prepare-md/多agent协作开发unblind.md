@@ -1,6 +1,10 @@
 # 用多 Agent 协作开发 Unblind 的实践指南
 
-> 本指南适用于：使用 Claude Code 的 Subagent 功能，以"双 pipeline"模式协同开发。
+> **角色定义**：
+> - **你（用户）**：项目开发者，Team Leader。与 PM Agent 讨论需求、审核方向、做最终决策。
+> - **PM Agent（当前对话的 Claude）**：项目经理。理解需求后派发任务给其他 Agent，逐关查验，控制流程。
+> - **Subagent 团队**：Architect / Developer / Reviewer / Security Lead / QA Engineer / Reliability Engineer，接收 PM 派发的任务，完成后回报。
+>
 > **模型**：设计/审查用 `deepseek-v4-pro`，实现/测试用 `deepseek-v4-flash`。
 
 ## 一、双 Pipeline 架构

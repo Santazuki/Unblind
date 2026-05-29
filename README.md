@@ -62,13 +62,15 @@ bash /tmp/unblind/install.sh
 
 ### 多 Agent 角色
 
-| Pipeline | 角色 | 职责 | 模型 |
-|----------|------|------|------|
-| Part 1 | Architect | 并行设计，输出 `docs/design/` | v4-pro |
-| Part 1 | Developer + Reviewer | 交叉审查，边开发边把关 | v4-flash / v4-pro |
-| Part 2 | Security Lead | 方向+攻击面分析+最终评估 | v4-pro |
-| Part 2 | QA Engineer | 全量回归+安全测试+报告 | v4-flash |
-| Part 2 | Reliability Engineer | 修复+CI/CD+版本管理 | v4-pro |
+**角色分工**：你（Leader）定方向 → PM Agent（我）派任务 → 6 个 Subagent 执行。
+
+| Pipeline | 角色 | 职责 |
+|----------|------|------|
+| Part 1 | Architect | 设计，SL 并行审查设计安全 |
+| Part 1 | Developer + Reviewer | 交叉审查 |
+| Part 2 | Security Lead | 方向+设计审查+最终评估 |
+| Part 2 | QA Engineer | 全量测试+安全验证+报告 |
+| Part 2 | Reliability Engineer | 修复+CI/CD，≤3轮循环 |
 
 ### 工程纪律
 
