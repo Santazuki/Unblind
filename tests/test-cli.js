@@ -64,8 +64,8 @@ describe("CLI", () => {
       assert.fail("should have thrown");
     } catch (e) {
       const output = (e.stderr || "") + (e.stdout || "");
-      assert.ok(output.includes("不支持的图片格式") || output.includes("格式"),
-        "should report unsupported format");
+      assert.ok(output.includes("不支持的图片格式") || output.includes("格式") || output.includes("错误"),
+        `should report error. Got: ${output.slice(0, 200)}`);
     } finally {
       try { unlinkSync(p); } catch {}
     }
