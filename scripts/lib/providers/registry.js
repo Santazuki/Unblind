@@ -1,5 +1,6 @@
 import { MimoProvider } from "./mimo.js";
 import { OpenAIProvider } from "./openai.js";
+import { GeminiProvider } from "./gemini.js";
 import { log } from "../logger.js";
 
 /**
@@ -30,6 +31,34 @@ const REGISTRY = [
     envKey: "OLLAMA_BASE_URL",
     build: (apiKey, url, model, timeoutMs) =>
       new OpenAIProvider({ apiKey: "ollama", baseUrl: url, model, timeoutMs }),
+  },
+  {
+    name: "gemini",
+    cls: GeminiProvider,
+    envKey: "GEMINI_API_KEY",
+    build: (apiKey, _url, model, timeoutMs) =>
+      new GeminiProvider({ apiKey, baseUrl: process.env.GEMINI_BASE_URL || "", model: process.env.GEMINI_MODEL || model || "gemini-2.5-flash", timeoutMs }),
+  },
+  {
+    name: "groq",
+    cls: OpenAIProvider,
+    envKey: "GROQ_API_KEY",
+    build: (apiKey, _url, model, timeoutMs) =>
+      new OpenAIProvider({ apiKey, baseUrl: process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1", model: process.env.GROQ_MODEL || "llama-4-vision", timeoutMs }),
+  },
+  {
+    name: "together",
+    cls: OpenAIProvider,
+    envKey: "TOGETHER_API_KEY",
+    build: (apiKey, _url, model, timeoutMs) =>
+      new OpenAIProvider({ apiKey, baseUrl: process.env.TOGETHER_BASE_URL || "https://api.together.xyz/v1", model: process.env.TOGETHER_MODEL || "Llama-4-Maverick", timeoutMs }),
+  },
+  {
+    name: "fireworks",
+    cls: OpenAIProvider,
+    envKey: "FIREWORKS_API_KEY",
+    build: (apiKey, _url, model, timeoutMs) =>
+      new OpenAIProvider({ apiKey, baseUrl: process.env.FIREWORKS_BASE_URL || "https://api.fireworks.ai/inference/v1", model: process.env.FIREWORKS_MODEL || "llama-v4", timeoutMs }),
   },
 ];
 

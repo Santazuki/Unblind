@@ -26,6 +26,12 @@ export function getBaseUrl(apiKey) {
     return url;
   }
 
+  if (apiKey.startsWith("AIza")) {
+    const url = "https://generativelanguage.googleapis.com/v1beta";
+    log("debug", "credentialManager", "base_url_detected", { type: "gemini", url });
+    return url;
+  }
+
   if (apiKey.startsWith("sk-")) {
     const url = "https://api.openai.com/v1";
     log("debug", "credentialManager", "base_url_detected", { type: "openai", url });
@@ -46,6 +52,9 @@ export function getBaseUrl(apiKey) {
 export function getAuthHeader(apiKey) {
   if (apiKey.startsWith("sk-")) {
     return { "Authorization": `Bearer ${apiKey}` };
+  }
+  if (apiKey.startsWith("AIza")) {
+    return { "x-goog-api-key": apiKey };
   }
   return { "x-api-key": apiKey };
 }
