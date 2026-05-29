@@ -4,55 +4,29 @@ import { loadConfig } from "./config.js";
 import { getApiKey, getBaseUrl } from "./credentialManager.js";
 import { processImage } from "./imageProcessor.js";
 import { withRetry, CircuitBreaker } from "./retry.js";
-import { MimoProvider } from "./providers/mimo.js";
-import { OpenAIProvider } from "./providers/openai.js";
 import { ClientError } from "./errorHandler.js";
 import { MODE_PROMPTS, VALID_MODES } from "./providers/provider.js";
 import { getCacheKey, get, set, getStats } from "./cache.js";
+import { loadProviders } from "./providers/registry.js";
 
-/**
- * 构建 Provider 链（按声明顺序：Mimo → OpenAI → Ollama 等）
- * 每个 Provider 有独立 CircuitBreaker，熔断自动跳过
- */
+/** 构建 Provider 链，每个 Provider 独立 CircuitBreaker */
 function buildProviderChain(config) {
-  const all = new Map();
-  const timeoutMs = config.requestTimeoutMs;
-
-  // Mimo (tp-/sk-ant Key)
   const mimoKey = getApiKey();
-  if (mimoKey) {
-    all.set("mimo", {
-      provider: new MimoProvider({ apiKey: mimoKey, baseUrl: getBaseUrl(mimoKey), model: config.model, timeoutMs }),
-      name: "mimo",
-      cb: new CircuitBreaker({ failureThreshold: 5, timeoutSeconds: 60 }),
-    });
-  }
+  const baseUrls = {
+    mimo: mimoKey ? getBaseUrl(mimoKey) : "",
+  };
+  const model = process.env.OPENAI_VISION_MODEL || config.model;
 
-  // OpenAI (sk- Key，非 sk-ant)
-  const openaiKey = process.env.OPENAI_API_KEY || "";
-  if (openaiKey) {
-    const oaiModel = process.env.OPENAI_VISION_MODEL || "gpt-4o";
-    all.set("openai", {
-      provider: new OpenAIProvider({ apiKey: openaiKey, model: oaiModel, timeoutMs }),
-      name: "openai",
-      cb: new CircuitBreaker({ failureThreshold: 5, timeoutSeconds: 60 }),
-    });
-  }
+  const providers = loadProviders(config.providerOrder, {
+    model: config.model,
+    timeoutMs: config.requestTimeoutMs,
+    baseUrls,
+  });
 
-  // Ollama (本地模型，OLLAMA_BASE_URL 存在时启用)
-  const ollamaUrl = config.ollamaUrl || process.env.OLLAMA_BASE_URL;
-  if (ollamaUrl) {
-    const ollamaModel = config.ollamaModel || process.env.OLLAMA_MODEL || "llava";
-    all.set("ollama", {
-      provider: new OpenAIProvider({ apiKey: "ollama", baseUrl: ollamaUrl, model: ollamaModel, timeoutMs }),
-      name: "ollama",
-      cb: new CircuitBreaker({ failureThreshold: 3, timeoutSeconds: 30 }),
-    });
-  }
-
-  // 按 UNBLIND_PROVIDER_ORDER 排序
-  const order = config.providerOrder.split(",").map(s => s.trim());
-  return order.filter(name => all.has(name)).map(name => all.get(name));
+  return providers.map(p => ({
+    ...p,
+    cb: new CircuitBreaker({ failureThreshold: p.name === "ollama" ? 3 : 5, timeoutSeconds: 60 }),
+  }));
 }
 
 /** 遍历 Provider 链，第一个成功即返回 */
