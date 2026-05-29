@@ -4,6 +4,8 @@
 >
 > DeepSeek 能求索，Unblind 让它看见。
 
+> 🚀 本项目全程使用 **Claude Code + Subagent-Driven Development** 开发，25+ AI Agent 协作完成从原型到工程化的全链路。我作为 **PM/架构决策者** 主导方向、审核设计、把关质量——AI 负责执行，我负责决策。
+
 ---
 
 [English](#english) | 中文
@@ -174,6 +176,8 @@ Unblind 的链路是：
 ---
 
 ## English
+
+> 🚀 Built end-to-end with **Claude Code + Subagent-Driven Development**. 25+ AI Agents collaborated — I directed the architecture, reviewed every design, and made the calls. AI executes, I decide.
 
 ## What is this
 
