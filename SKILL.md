@@ -1,11 +1,11 @@
 ---
 name: unblind
 description: >
-  Routes images to Mimo/OpenAI vision API for text-only models. Use this
-  skill when the user sends an image, asks "what's in this picture", says
-  "analyze this screenshot", requests "OCR" or "extract text", reviews UI
-  designs, reads charts, or uses Chinese triggers like 识别图片/看图.
-  Self-healing setup on first run. Does NOT handle video, audio, or PDFs.
+  将图片路由到视觉 API 进行分析。支持通用描述、OCR 文字提取、
+  UI 设计评审、图表数据提取、物体检测、多图对比六种模式。
+  触发: 图片文件路径、"分析这张图"、"这是什么"、"提取文字"、
+  "OCR"、"识别图片"、"看图"、"评审界面"、"图表数据"、"有什么"。
+  NOT: 视频分析、音频处理、PDF 文档、纯文本对话。
 metadata:
   version: "2.2"
   category: ai-vision
@@ -16,14 +16,29 @@ metadata:
     - Mimo or OpenAI API key (auto-prompted on first run)
 compatibility: Claude Code (bundled script, zero npm deps)
 allowed-tools: Bash(node ~/.claude/skills/unblind/scripts/unblind.mjs:*)
+model: inherit
+context: fork
+argument-hint: [image-path] [mode]
 ---
 
-<!-- LEVEL 1: Metadata above (~180 tokens, always loaded) -->
-<!-- LEVEL 2: Instructions below (~700 tokens, loaded on trigger) -->
+<!-- L1: Metadata (~160 tokens) | L2: Instructions below (~700 tokens) -->
 
 # Unblind
 
-Route images to vision API. Never pretend to see. Never Read/Edit settings.json.
+## 概述
+
+为纯文本模型提供视觉能力。支持 7 个 Provider（Mimo/OpenAI/Gemini/Ollama/Groq/Together/Fireworks）链式轮换。
+自愈配置——首次运行自动检测并修复缺失设置。不处理视频、音频、PDF。
+
+## 触发条件
+
+| 触发 | 不触发 |
+|------|--------|
+| 图片路径 (`.png/.jpg/.gif/.webp/.bmp/.svg`) | 视频文件 |
+| "分析这张图"、"这是什么"、"看图" | 音频文件 |
+| "OCR"、"提取文字"、"识别文字" | PDF 文档 |
+| "评审界面"、"UI"、"设计" | 纯文本对话 |
+| "图表"、"数据"、"趋势" | "生成图片"、"画一张" |
 
 ## Iron Rules
 
@@ -33,19 +48,24 @@ Route images to vision API. Never pretend to see. Never Read/Edit settings.json.
 4. Never preamble. Never hallucinate. Always invoke bundled script.
 5. Tool reads API key from env automatically
 
-## Quick Start
+| 你可能在想 | 事实 |
+|-----------|------|
+| "配置应该没问题，跳过检查吧" | 配置会在你不注意时失效——Phase 0 每次都要跑 |
+| "我可以直接 Read settings.json 看看" | Read 会把 Key 写进对话记录——绝对禁止 |
+| "先描述一下这张图再调工具" | 你做不到——直接调工具 |
 
-User sends image → Unblind routes to Mimo/OpenAI → returns text.
-Example: "What's in this screenshot?" → OCR mode extracts all text.
-Example: "Review this UI design" → ui-review mode critiques layout/UX.
+## 错误处理
 
-## Edge Cases
-
-- API key expired/missing → Phase 0.2 prompts user to set it
-- Image >50MB → rejected with size limit + compression suggestion
-- Unsupported format → rejected with list of 7 supported formats
-- Both providers fail → automatic Mimo→OpenAI fallback, clean error if both down
-- Malicious path input → metacharacter gate rejects before execution
+| 错误 | 原因 | 处理 |
+|------|------|------|
+| `KEY_MISSING` | 未配置 API Key | Phase 0.2 引导用户设置 |
+| `MODEL_MISSING` | 模型名无效 | Phase 0.5 引导选择 |
+| `PERM_MISSING` | 缺少 Bash 权限 | Phase 0.4 自动添加 |
+| API Key 无效 (401) | Key 过期 | 提示重新获取 |
+| 文件不存在 | 路径错误 | 提示检查路径 |
+| 格式不支持 | 非白名单扩展名 | 提示支持格式列表 |
+| 文件过大 | >50MB | 提示压缩或调整上限 |
+| 所有 Provider 失败 | 网络/服务故障 | 提示稍后重试 |
 
 ## Phase 0: Self-Healing
 
@@ -60,38 +80,30 @@ node -e "const fs=require('fs');const os=require('os');const p=require('path').j
 
 ### 0.2-0.8 Repair procedures
 
-See `resources/troubleshooting.md` for: API key setup, base URL repair, permission fix, model selection, version check, Node.js check.
-
-Key rules:
-- API key: user runs command in own terminal. Never write it yourself.
-- Model switch: user says "切换模型" → show prompt, write via Bash, confirm.
-- Version: `git fetch` → if behind, tell user to `git pull`.
+See `resources/troubleshooting.md`. Key rules: API key set by user in own terminal. Model switch via `--set-model`. Version: `git fetch` → notify.
 
 ### 0.9 All healthy → Phase 1
 
 ## Phase 1-4: Analyze
 
 1. **Detect** image path from `[Image: source: <path>]`. Must be absolute, supported ext, no shell metacharacters.
-2. **Classify** mode: `describe` (default), `ocr`, `ui-review`, `chart-data`, `object-detect`.
+2. **Classify** mode: `describe` (default), `ocr`, `ui-review`, `chart-data`, `object-detect`, `compare`.
 3. **Execute**: `node ~/.claude/skills/unblind/scripts/unblind.mjs '<path>' <mode>` — no preamble.
 4. **Report**: print stdout. API key error → back to 0.2.
 
-## CLI Quick Reference
+## CLI Reference
 
 ```
 node scripts/unblind.mjs <image> <mode>  分析图片
-node scripts/unblind.mjs --health        健康检查
-node scripts/unblind.mjs --config        查看配置（Key已脱敏）
-node scripts/unblind.mjs --set-model <m> 切换模型 (mimo-v2.5 / mimo-v2-omni)
-node scripts/unblind.mjs --no-cache      跳过缓存
-node scripts/unblind.mjs --cache-stats   缓存统计
+node scripts/unblind.mjs --health --config --set-model
+node scripts/unblind.mjs --no-cache --cache-stats
 ```
 
-<!-- LEVEL 3: Resources (on-demand, see files below) -->
+<!-- L3: Resources (on-demand) -->
 
 ## Resources
 
 - `resources/troubleshooting.md` — Phase 0 repair commands, common errors, Node.js setup
-- `resources/best_practices.md` — Model selection guide, token optimization, debugging
-- `templates/output_formats/` — JSON/YAML/CSV output templates (Phase 3+)
-- `README.md` — Install guide, security verification, GPT audit rebuttal
+- `resources/best_practices.md` — Model selection, token optimization, debugging
+- `templates/output_formats/` — JSON/YAML/CSV output templates
+- `README.md` — Install guide, security verification
