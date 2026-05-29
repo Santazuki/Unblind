@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-Phase 1+2+3 完成，Phase 5 高级功能完成。165 行单文件 → 16 模块，93 tests（91 pass, 0 fail, 2 API-skip）。Provider 注册表 7 条目（Mimo/OpenAI/Ollama/Gemini/Groq/Together/Fireworks）。
+Phase 1+2+3 完成，Phase 5 高级功能完成。165 行单文件 → 16 模块，95 tests（93 pass, 0 fail, 2 API-skip）。Provider 注册表 7 条目（Mimo/OpenAI/Ollama/Gemini/Groq/Together/Fireworks）。
 
 > 注意：`docs/project-prepare-md/` 中的设计文档使用 `src/` + TypeScript，代表**原始蓝图**。实际采用 `scripts/lib/` + JavaScript + `env.*` 配置格式。差异是有意为之（零编译、Claude Code 原生 env 注入），历史设计文档未更新。
 
@@ -32,7 +32,7 @@ scripts/
         ├── mimo.js          # Mimo Anthropic-compatible API
         ├── openai.js        # OpenAI Chat Completions API (GPT-4V/GLM-5V/Ollama)
         └── gemini.js        # Google Gemini API
-tests/                       # node --test tests/test-*.js (75 tests, 73 pass, 2 API-skip)
+tests/                       # node --test tests/test-*.js (95 tests, 93 pass, 2 API-skip)
 docs/test-results/           # 16 份按步骤的测试结果
 resources/troubleshooting.md # Phase 0 修复命令、常见错误
 ```
