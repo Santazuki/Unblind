@@ -148,29 +148,47 @@ model: deepseek-v4-pro
 ## 四、完整流程
 
 ```
-Part 1: Architect → Developer → Reviewer
-                              │
-                    ┌─ CRITICAL? → Developer
-                    └─ 通过 → 问题清单
-                                    │
-Part 2: Security Lead ←────────────┘
-           │
-           ▼
-        QA Engineer ──→ PASS? → SL 评估 → 提交
-           │                                 ↑
-           │ FAIL                            │
-           ▼                                 │
-        RE 诊断                             │
-        ├── 可修 → 修复 → QA 重测 ──→ (≤3轮) ┘
-        ├── 代码bug → 退回 Developer
-        └── 设计缺陷 → 退回 Architect
-
-3轮上限:
-  ├── 非阻塞 → known-issues.md → SL 标记 CLEAN → 提交
-  └── 阻塞性 → 通知 Leader 决策
+你（Leader）提需求
+      ↓
+PM Agent 派发任务
+      ↓
+┌─ Part 1 ──────────────────────────────────────┐
+│  Architect → docs/design/<feature>.md          │
+│      ↓                ↓                        │
+│      │        Security Lead 并行审查设计        │   ← 安全左移
+│      │                │                        │
+│      │         设计安全问题? → 回 Architect     │
+│      ↓                                         │
+│  Developer ×N ──→ 代码变更                     │
+│      ↓                                         │
+│  Reviewer ×N (交叉审查)                         │
+│      ↓                                         │
+│  ├─ CRITICAL? → 阻断 Part 2，回 Developer      │
+│  ├─ 代码问题 → Developer 修复                  │
+│  └─ 功能问题 → 问题清单 → 传递给 Part 2        │
+└────────────────────────────────────────────────┘
+      ↓
+┌─ Part 2: Quality Gate ────────────────────────┐
+│  Security Lead (汇总攻击面 + 功能问题)          │
+│      ↓                                         │
+│  QA Engineer → node --test                     │
+│      ├─ PASS → 报告                            │
+│      └─ FAIL → RE 诊断                         │
+│           ├─ 可修(配置/环境/测试) → 修复       │
+│           ├─ 代码bug → 退回 Part 1 Developer   │
+│           └─ 设计缺陷 → 退回 Part 1 Architect  │
+│      ↓                                         │
+│  QA 重测 (≤3轮)                                 │
+│      ↓                                         │
+│  3轮后仍失败:                                   │
+│      ├─ 非阻塞 → known-issues.md → CLEAN       │
+│      └─ 阻塞性 → 通知你(Leader)决策            │
+│      ↓                                         │
+│  Security Lead 最终评估 → CLEAN                │
+└────────────────────────────────────────────────┘
+      ↓
+提交 + CLAUDE.md 更新 + 记忆持久化
 ```
-
-**PM Agent 在 5 个关口逐项查验，控制流程流转。**
 
 ## 五、PM 关口（保证流程执行）
 
