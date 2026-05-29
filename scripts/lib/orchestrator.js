@@ -21,10 +21,15 @@ function buildProviderChain(config) {
 
   let providers;
   if (useV3) {
+    const mimoKeyV3 = getApiKey();
+    const baseUrlsV3 = {
+      mimo: mimoKeyV3 ? getBaseUrl(mimoKeyV3) : "",
+    };
+    const modelV3 = process.env.OPENAI_VISION_MODEL || config.model;
     providers = loadProvidersV3(config.providerOrder, {
-      model: config.model,
+      model: modelV3,
       timeoutMs: config.requestTimeoutMs,
-      baseUrls: {},
+      baseUrls: baseUrlsV3,
     });
   } else {
     const mimoKey = getApiKey();

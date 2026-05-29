@@ -103,7 +103,7 @@ export class GenericProvider {
       headers,
       timeoutMs: this._timeoutMs,
       providerName: this.name,
-      parseError: (data, status) => this._proto.parseError(data, status),
+      parseError: (data, status) => this._call("parseError", data, status),
     });
 
     const data = await res.json();
