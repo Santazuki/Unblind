@@ -1,10 +1,11 @@
 ---
 name: unblind
 description: >
-  Give DeepSeek vision capability. Routes images to Mimo/OpenAI vision API.
-  Self-healing setup on first run. Triggers: any image path, "analyze this",
-  "what's in this picture", "read this screenshot", "extract text from",
-  "describe this chart", "review this UI", "识别图片", "看图", "OCR".
+  Routes images to Mimo/OpenAI vision API for text-only models. Use this
+  skill when the user sends an image, asks "what's in this picture", says
+  "analyze this screenshot", requests "OCR" or "extract text", reviews UI
+  designs, reads charts, or uses Chinese triggers like 识别图片/看图.
+  Self-healing setup on first run. Does NOT handle video, audio, or PDFs.
 metadata:
   version: "2.2"
   category: ai-vision

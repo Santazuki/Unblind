@@ -1,0 +1,25 @@
+{
+  "skill_name": "unblind",
+  "evals": [
+    {"id": 1, "prompt": "what's in this image?", "should_trigger": true},
+    {"id": 2, "prompt": "analyze this screenshot for me", "should_trigger": true},
+    {"id": 3, "prompt": "OCR this receipt", "should_trigger": true},
+    {"id": 4, "prompt": "帮我看看这张图里有什么", "should_trigger": true},
+    {"id": 5, "prompt": "识别图片中的文字", "should_trigger": true},
+    {"id": 6, "prompt": "review this UI mockup", "should_trigger": true},
+    {"id": 7, "prompt": "extract data from this chart", "should_trigger": true},
+    {"id": 8, "prompt": "I need you to look at this photo and tell me what objects are in it", "should_trigger": true},
+    {"id": 9, "prompt": "describe this diagram", "should_trigger": true},
+    {"id": 10, "prompt": "read the text from this scanned document", "should_trigger": true},
+    {"id": 11, "prompt": "generate a video from this image", "should_trigger": false},
+    {"id": 12, "prompt": "edit this photo — remove the background", "should_trigger": false},
+    {"id": 13, "prompt": "play this audio file", "should_trigger": false},
+    {"id": 14, "prompt": "read this PDF and summarize it", "should_trigger": false},
+    {"id": 15, "prompt": "create an image of a cat", "should_trigger": false},
+    {"id": 16, "prompt": "what does this CSV file contain?", "should_trigger": false},
+    {"id": 17, "prompt": "generate a chart from this data", "should_trigger": false},
+    {"id": 18, "prompt": "translate this Spanish text to English", "should_trigger": false},
+    {"id": 19, "prompt": "write a bash script to resize images", "should_trigger": false},
+    {"id": 20, "prompt": "I have a video file — can you watch it and tell me what happens?", "should_trigger": false}
+  ]
+}
