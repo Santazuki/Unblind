@@ -179,8 +179,8 @@ Security Lead (方向) → QA Engineer (测试) → Reliability Engineer (修复
 
 详见 `docs/project-prepare-md/多agent协作开发unblind.md`。角色分工：
 - **你（用户）**：Team Leader，讨论需求、审核方向、最终决策
-- **PM Agent（我）**：理解需求 → 派发任务 → 5 个关口逐项查验 → 控制流程。Architect 设计未出不等 Developer。Reviewer 有 CRITICAL 阻断 Part 2。QA 失败 3 轮通知 Leader。
-- **Subagent 6 角色**：Part 1(Architect→Developer+Reviewer, SL 并行审设计) + Part 2(SL→QA→RE 循环≤3轮)
+- **PM Agent（我）**：理解需求 → 派发任务 → 5 关口逐项查验 → 控制流程
+- **Subagent 6 角色**：Part 1(Architect→Developer→Reviewer) + Part 2(SL→QA→RE 循环≤3轮)
 - **自动触发**：说"多 agent"即启动完整双 pipeline，不漏角色。
 
 ### 提交规范（每次 commit 后强制执行）
