@@ -2,7 +2,7 @@
 
 > 从"适配器模式"到"协议驱动架构"：将数据库领域验证了 30 年的 Dialect 模式迁移到 AI Agent 工具链。
 >
-> **已提取为独立项目：[@unblind/provider-kit](https://github.com/Santazuki/provider-kit) — 300 行、零依赖、纯 TypeScript。**
+> **已完成。** v3.0 为唯一路径，旧 Provider 文件已删除。171 tests, 169 pass, 0 fail, 2 skip。独立 npm 包：[@unblind/provider-kit](https://github.com/Santazuki/provider-kit)。
 
 ---
 
@@ -10,12 +10,14 @@
 
 | 组件 | 文件 | 状态 | 说明 |
 |------|------|:---:|------|
-| 协议定义 (3家族) | `protocols.js` | ⚠️ stub | `buildBody/parseError/extractContent` 已写。缺 `endpoint/auth/buildContent` |
-| GenericProvider | `generic-provider.js` | ⚠️ stub | 基础流程可跑。typed helper 已替代 `_call`。缺 healthCheck 真实探测 |
-| parseError 委托 | `httpClient.js` | ✅ 完成 | v3 路径，按 category 分派错误 |
-| Registry V3 (纯数据) | `registry.js` | ✅ 完成 | `REGISTRY_V3` 7 条目 + `loadProvidersV3()` |
-| v2/v3 开关 | `orchestrator.js` | ✅ 完成 | `UNBLIND_PROTOCOL_DRIVEN=1` 启停 |
-| 独立 npm 包 | `provider-kit/` | ✅ 完成 | TypeScript 严格模式，discriminated union，纯函数可测 |
+| 协议定义 (3家族) | `protocols.js` | ✅ 完成 | 6 方法 × 3 协议族。`commonParseError` 抽取公共逻辑 |
+| GenericProvider | `generic-provider.js` | ✅ 完成 | 唯一类，overrides 校验，`execute` + `analyzeImage` 双接口 |
+| parseError 委托 | `httpClient.js` | ✅ 完成 | v3 路径，按 category 分派错误。向后兼容 |
+| Registry (纯数据) | `registry.js` | ✅ 完成 | 7 Provider，`loadProviders()`，旧 REGISTRY 已删除 |
+| 旧 Provider 文件 | `mimo.js`/`openai.js`/`gemini.js` | 🗑️ 已删除 | 由 `protocols.js` + `GenericProvider` 替代 |
+| BaseProvider | `provider.js` | 🗑️ 已删除 | 仅保留 `MODE_PROMPTS` |
+| 独立 npm 包 | [provider-kit](https://github.com/Santazuki/provider-kit) | ✅ 完成 | TypeScript，零依赖，~300 LOC |
+| 全量测试 | `tests/test-*.js` | ✅ 171 pass | test-protocols.js (38) + test-generic-provider.js (18) + 回归 |
 
 ---
 
