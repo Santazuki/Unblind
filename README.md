@@ -1,28 +1,28 @@
 # Unblind — 一个不会悄无声息挂掉的视觉 skill
 
-> 给 AI Agent 安装可靠的视觉能力。自愈配置、熔断重试、安全沙箱。
+> 👁️ 给 AI Agent 安装可靠的视觉能力。自愈配置、熔断重试、安全沙箱。
 > 你的 Agent 值得一个不会悄无声息挂掉的视觉后端。
 >
-> 全程使用 **Claude Code** 开发，采用自研**双 Pipeline 多 Agent 协作模式**。
+> 🛠️ 全程使用 **Claude Code** 开发，采用自研**双 Pipeline 多 Agent 协作模式**。
 
 [English](#english) | 中文
 
 ---
 
-## 为什么选择 Unblind
+## ✨ 为什么选择 Unblind
 
 大多数视觉 skill 是一层薄薄的 API 封装——请求失败就抛异常，配置丢了就卡住。Unblind 按后端工程标准设计，每一步都有防御：
 
-- **Phase 0 自愈**：每次调用静默检查环境，配置缺失当场修复，不打断用户
-- **熔断 + 指数退避**：每 Provider 独立 CircuitBreaker，故障不雪崩
-- **SHA256 持久化缓存**：内容寻址，跨进程命中，TTL + LRU 1000
-- **Provider 故障转移**：链式轮换 7 个 Provider，第一个失败自动切下一个
-- **魔数文件校验**：读取文件头字节，拒绝伪装成图片的攻击文件
-- **安全沙箱**：零 exec / child_process，API Key 不在任何输出中暴露
-- **结构化输出**：`--format json|yaml|csv`，Agent 可编程调用
-- **零 npm 依赖**：只用 Node.js >= 18 内置模块，clone 即用
+- **🩺 Phase 0 自愈**：每次调用静默检查环境，配置缺失当场修复，不打断用户
+- **🔌 熔断 + 指数退避**：每 Provider 独立 CircuitBreaker，故障不雪崩
+- **💾 SHA256 持久化缓存**：内容寻址，跨进程命中，TTL + LRU 1000
+- **🔀 Provider 故障转移**：链式轮换 7 个 Provider，第一个失败自动切下一个
+- **🛡️ 魔数文件校验**：读取文件头字节，拒绝伪装成图片的攻击文件
+- **🔒 安全沙箱**：零 exec / child_process，API Key 不在任何输出中暴露
+- **📐 结构化输出**：`--format json|yaml|csv`，Agent 可编程调用
+- **📦 零 npm 依赖**：只用 Node.js >= 18 内置模块，clone 即用
 
-## 快速开始
+## 🚀 快速开始
 
 把下面这句话发给 Claude Code：
 
@@ -37,7 +37,7 @@ bash /tmp/unblind/install.sh
 
 首次运行自动检测缺失配置并修复。无需手动编辑 settings.json。
 
-## 工程特性
+## ⚙️ 工程特性
 
 ### Phase 0 自愈
 
@@ -59,7 +59,7 @@ bash /tmp/unblind/install.sh
 - **错误脱敏**：Provider 名、响应体不进入用户可见错误
 - **三轮安全审计**：18 security tests，全部 CLEAN
 
-## 分析模式
+## 🔍 分析模式
 
 | 模式 | 用途 | CLI |
 |------|------|-----|
@@ -72,7 +72,7 @@ bash /tmp/unblind/install.sh
 
 结构化输出：`--format json|yaml|csv`
 
-## 视觉模型
+## 🎯 视觉模型
 
 预置 7 个 Provider，通过 `UNBLIND_PROVIDER_ORDER` 自定义轮换顺序：
 
@@ -88,7 +88,7 @@ bash /tmp/unblind/install.sh
 
 新增 Provider = 在注册表数组中加一行纯数据，不写逻辑代码。
 
-## CLI
+## ⌨️ CLI
 
 ```
 node scripts/unblind.mjs <image> [mode]   分析图片
@@ -102,7 +102,7 @@ node scripts/unblind.mjs --clear-cache            清空缓存
 node scripts/unblind.mjs --no-cache <image>       跳过缓存
 ```
 
-## 架构
+## 🏗️ 架构
 
 ```
 CLI (unblind.mjs)
@@ -116,7 +116,7 @@ CLI (unblind.mjs)
 
 v3.0 协议驱动架构 — 3 协议族 (Anthropic Messages / OpenAI Chat Completions / Google Generative AI)，7 个 Provider 通过纯数据注册表声明。详见 [设计文档](docs/superpowers/specs/2026-05-30-provider-v3-protocol-driven-design.md)。
 
-## 工程实践
+## 🧪 工程实践
 
 采用自研**双 Pipeline 多 Agent 协作模式**开发。
 
@@ -134,9 +134,9 @@ v3.0 协议驱动架构 — 3 协议族 (Anthropic Messages / OpenAI Chat Comple
 
 **Unblind** — A vision skill that doesn't fail silently.
 
-Give your AI Agent reliable vision. Self-healing config, circuit-breaker retry, SHA256 cache, security sandbox. Built entirely with **Claude Code**, using a custom **dual-pipeline multi-agent workflow**.
+👁️ Give your AI Agent reliable vision. Self-healing config, circuit-breaker retry, SHA256 cache, security sandbox. Built entirely with **Claude Code**, using a custom **dual-pipeline multi-agent workflow**.
 
-### Why Unblind
+### ✨ Why Unblind
 
 Most vision skills are thin API wrappers — fail on a bad request, freeze on missing config. Unblind is engineered with defense at every layer:
 
@@ -149,13 +149,13 @@ Most vision skills are thin API wrappers — fail on a bad request, freeze on mi
 - **Structured Output**: `--format json|yaml|csv` for programmable agent consumption
 - **Zero npm Dependencies**: Node.js >= 18 built-in modules only, clone and run
 
-### Quick Install
+### 🚀 Quick Install
 
 Send this to Claude Code:
 
 > Install the unblind skill from https://github.com/Santazuki/unblind — clone it and run install.sh.
 
-### Engineering
+### 🧪 Engineering
 
 Built with a custom **dual-pipeline multi-agent workflow**.
 
