@@ -236,6 +236,12 @@ describe("PROTOCOLS: google-generative-ai", () => {
     assert.deepStrictEqual(body.contents[0].parts, [{ text: "Hi" }]);
   });
 
+  it("buildBody — custom temperature via generationConfig", () => {
+    const body = proto.buildBody("gemini-2.5-flash", [{ text: "Hi" }], { temperature: 0.3 });
+    assert.ok(body.generationConfig);
+    assert.equal(body.generationConfig.temperature, 0.3);
+  });
+
   it("extractContent — valid response", () => {
     const data = { candidates: [{ content: { parts: [{ text: "A cat on a sofa" }] } }] };
     assert.equal(proto.extractContent(data), "A cat on a sofa");
