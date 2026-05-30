@@ -1,3 +1,5 @@
+<h1 align="center">Unblind</h1>
+
 <p align="center">
   <img src="https://img.shields.io/badge/version-3.0-blue" alt="version">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="license">
@@ -6,8 +8,6 @@
   <img src="https://img.shields.io/badge/dependencies-0-zero?labelColor=white" alt="zero deps">
   <img src="https://img.shields.io/badge/agentskills.io-compatible-purple" alt="agentskills.io">
 </p>
-
-<h1 align="center">Unblind</h1>
 <p align="center">
   <em>一个不会悄无声息挂掉的视觉 skill。</em>
   <br>
