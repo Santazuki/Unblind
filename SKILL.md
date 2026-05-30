@@ -1,13 +1,16 @@
 ---
 name: unblind
 description: >
-  将图片路由到视觉 API 进行分析。支持通用描述、OCR 文字提取、
-  UI 设计评审、图表数据提取、物体检测、多图对比六种模式。
-  触发: 图片文件路径、"分析这张图"、"这是什么"、"提取文字"、
-  "OCR"、"识别图片"、"看图"、"评审界面"、"图表数据"、"有什么"。
-  NOT: 视频分析、音频处理、PDF 文档、纯文本对话。
+  可靠的视觉分析 skill。自愈配置、熔断重试、SHA256 缓存。
+  支持通用描述、OCR 文字提取、UI 设计评审、图表数据提取、物体检测、多图对比六种模式。
+  触发: 任何图片路径、"分析这张图"、"这是什么"、"截图"、"提取文字"、
+  "OCR"、"识别文字"、"看图"、"评审界面"、"图表数据"。
+  Triggers: any image path, "analyze this", "what's in this picture",
+  "read this screenshot", "extract text from", "describe this chart",
+  "review this UI".
+  NOT: 视频分析、音频处理、PDF 文档、纯文本对话、"生成图片"。
 metadata:
-  version: "2.2"
+  version: "3.0"
   category: ai-vision
   bundled_tools:
     - scripts/unblind.mjs
@@ -27,8 +30,7 @@ argument-hint: [image-path] [mode]
 
 ## 概述
 
-为纯文本模型提供视觉能力。支持 7 个 Provider 链式轮换。自愈配置。
-采用双 pipeline 多 Agent 开发(PM关口控制)：Part 1(Architect→Developer+Reviewer, SL 并行审设计) + Part 2(SL→QA→RE 循环≤3轮)。不处理视频、音频、PDF。
+可靠的视觉分析 skill。自愈配置、熔断重试、SHA256 持久化缓存。7 个 Provider 通过协议驱动架构调度。不为内置视觉模型的模型触发（Claude 等可直接看图）。
 
 ## 触发条件
 
@@ -94,7 +96,9 @@ See `resources/troubleshooting.md`. Key rules: API key set by user in own termin
 ## CLI Reference
 
 ```
-node scripts/unblind.mjs <image> <mode>  分析图片
+node scripts/unblind.mjs <image> <mode>    分析图片
+node scripts/unblind.mjs <a> <b> compare   多图对比
+node scripts/unblind.mjs <img> --format json  结构化输出
 node scripts/unblind.mjs --health --config --set-model
 node scripts/unblind.mjs --no-cache --cache-stats
 ```

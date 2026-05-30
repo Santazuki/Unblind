@@ -6,8 +6,7 @@ import { createHash } from "crypto";
 import { join, dirname } from "path";
 import { tmpdir } from "os";
 import { fileURLToPath } from "url";
-import { MimoProvider } from "../scripts/lib/providers/mimo.js";
-import { OpenAIProvider } from "../scripts/lib/providers/openai.js";
+import { PROTOCOLS } from "../scripts/lib/providers/protocols.js";
 import { MODE_PROMPTS } from "../scripts/lib/providers/provider.js";
 import { getCacheKey } from "../scripts/lib/cache.js";
 
@@ -88,12 +87,9 @@ describe("CLI multi-image parsing", () => {
     const p = join(tmpdir(), "test-mi-backward.png");
     writeFileSync(p, MINI_PNG);
     try {
-      // Will try to actually analyze (likely fail on API), just check it gets past arg parsing
       execSync(`node "${UNBLIND}" "${p}" ocr`, { encoding: "utf8", timeout: 5000 });
     } catch (e) {
-      // API call may fail, that's OK — just check it didn't die on arg parsing
       const output = (e.stderr || "") + (e.stdout || "");
-      // Should NOT say "至少 2 张" or "Usage" — those indicate parsing errors
       assert.ok(!output.includes("至少 2 张"), "should not require 2 images");
       assert.ok(!output.includes("Usage"), "should not show usage");
     } finally {
@@ -102,88 +98,76 @@ describe("CLI multi-image parsing", () => {
   });
 });
 
-/* ======== Mimo _buildRequest tests ======== */
+/* ======== Anthropic protocol buildContent tests ======== */
 
-describe("MimoProvider _buildRequest multi-image", () => {
+describe("anthropic-messages buildContent multi-image", () => {
+  const proto = PROTOCOLS["anthropic-messages"];
+
   it("should build multi-image content array with N images + 1 text", () => {
-    const p = new MimoProvider({ apiKey: "tp-test", baseUrl: "https://test.local" });
-    const images = [
-      { base64: "data:image/png;base64,abc", mimeType: "image/png" },
-      { base64: "data:image/png;base64,def", mimeType: "image/png" },
+    const inputs = [
+      { type: "image", data: "data:image/png;base64,abc", mimeType: "image/png" },
+      { type: "image", data: "data:image/png;base64,def", mimeType: "image/png" },
     ];
-    const prompt = "compare these";
-    const req = p._buildRequest(images, prompt, { mode: "compare" });
+    const content = proto.buildContent(inputs, "compare these");
 
-    assert.equal(req.body.messages[0].content.length, 3, "should have 2 image + 1 text entries");
-    assert.equal(req.body.messages[0].content[0].type, "image");
-    assert.equal(req.body.messages[0].content[0].source.type, "base64");
-    assert.equal(req.body.messages[0].content[0].source.data, "abc");
-    assert.equal(req.body.messages[0].content[1].source.data, "def");
-    assert.equal(req.body.messages[0].content[2].type, "text");
-    assert.equal(req.body.messages[0].content[2].text, prompt);
+    assert.equal(content.length, 3, "should have 2 image + 1 text entries");
+    assert.equal(content[0].type, "image");
+    assert.equal(content[0].source.type, "base64");
+    assert.equal(content[0].source.data, "abc");
+    assert.equal(content[1].source.data, "def");
+    assert.equal(content[2].type, "text");
+    assert.equal(content[2].text, "compare these");
   });
 
   it("should handle 3 images", () => {
-    const p = new MimoProvider({ apiKey: "tp-test", baseUrl: "https://test.local" });
-    const images = [
-      { base64: "data:image/png;base64,a", mimeType: "image/png" },
-      { base64: "data:image/png;base64,b", mimeType: "image/png" },
-      { base64: "data:image/png;base64,c", mimeType: "image/png" },
+    const inputs = [
+      { type: "image", data: "data:image/png;base64,a", mimeType: "image/png" },
+      { type: "image", data: "data:image/png;base64,b", mimeType: "image/png" },
+      { type: "image", data: "data:image/png;base64,c", mimeType: "image/png" },
     ];
-    const req = p._buildRequest(images, "test", { mode: "compare" });
-    assert.equal(req.body.messages[0].content.length, 4, "3 images + 1 text");
+    const content = proto.buildContent(inputs, "test");
+    assert.equal(content.length, 4, "3 images + 1 text");
   });
 
-  it("should handle single image string (backward compat)", () => {
-    const p = new MimoProvider({ apiKey: "tp-test", baseUrl: "https://test.local" });
-    const req = p._buildRequest("data:image/png;base64,abc", "describe", { mode: "describe" });
-
-    assert.equal(req.body.messages[0].content.length, 2, "1 image + 1 text");
-    assert.equal(req.body.messages[0].content[0].type, "image");
-    assert.equal(req.body.messages[0].content[0].source.data, "abc");
-    assert.equal(req.body.messages[0].content[1].type, "text");
-  });
-
-  it("should preserve mime type from image objects", () => {
-    const p = new MimoProvider({ apiKey: "tp-test", baseUrl: "https://test.local" });
-    const images = [
-      { base64: "data:image/jpeg;base64,xyz", mimeType: "image/jpeg" },
-      { base64: "data:image/webp;base64,uvw", mimeType: "image/webp" },
+  it("should preserve mime type from image inputs", () => {
+    const inputs = [
+      { type: "image", data: "data:image/jpeg;base64,xyz", mimeType: "image/jpeg" },
+      { type: "image", data: "data:image/webp;base64,uvw", mimeType: "image/webp" },
     ];
-    const req = p._buildRequest(images, "compare", { mode: "compare" });
-    assert.equal(req.body.messages[0].content[0].source.media_type, "image/jpeg");
-    assert.equal(req.body.messages[0].content[1].source.media_type, "image/webp");
+    const content = proto.buildContent(inputs, "compare");
+    assert.equal(content[0].source.media_type, "image/jpeg");
+    assert.equal(content[1].source.media_type, "image/webp");
   });
 });
 
-/* ======== OpenAI _buildRequest tests ======== */
+/* ======== OpenAI protocol buildContent tests ======== */
 
-describe("OpenAIProvider _buildRequest multi-image", () => {
+describe("openai-chat-completions buildContent multi-image", () => {
+  const proto = PROTOCOLS["openai-chat-completions"];
+
   it("should build multi-image content array with N images + 1 text", () => {
-    const p = new OpenAIProvider({ apiKey: "sk-test", baseUrl: "https://api.openai.com/v1" });
-    const images = [
-      { base64: "data:image/png;base64,abc", mimeType: "image/png" },
-      { base64: "data:image/png;base64,def", mimeType: "image/png" },
+    const inputs = [
+      { type: "image", data: "data:image/png;base64,abc", mimeType: "image/png" },
+      { type: "image", data: "data:image/png;base64,def", mimeType: "image/png" },
     ];
-    const prompt = "compare these";
-    const req = p._buildRequest(images, prompt, { mode: "compare" });
+    const content = proto.buildContent(inputs, "compare these");
 
-    assert.equal(req.body.messages[0].content.length, 3, "should have 2 image + 1 text entries");
-    assert.equal(req.body.messages[0].content[0].type, "image_url");
-    assert.equal(req.body.messages[0].content[0].image_url.url, "data:image/png;base64,abc");
-    assert.equal(req.body.messages[0].content[1].image_url.url, "data:image/png;base64,def");
-    assert.equal(req.body.messages[0].content[2].type, "text");
-    assert.equal(req.body.messages[0].content[2].text, prompt);
+    assert.equal(content.length, 3, "should have 2 image + 1 text entries");
+    assert.equal(content[0].type, "image_url");
+    assert.equal(content[0].image_url.url, "data:image/png;base64,abc");
+    assert.equal(content[1].image_url.url, "data:image/png;base64,def");
+    assert.equal(content[2].type, "text");
+    assert.equal(content[2].text, "compare these");
   });
 
-  it("should handle single image string (backward compat)", () => {
-    const p = new OpenAIProvider({ apiKey: "sk-test", baseUrl: "https://api.openai.com/v1" });
-    const req = p._buildRequest("data:image/png;base64,abc", "describe", { mode: "describe" });
+  it("should handle single image string via input (backward compat)", () => {
+    const inputs = [{ type: "image", data: "data:image/png;base64,abc", mimeType: "image/png" }];
+    const content = proto.buildContent(inputs, "describe");
 
-    assert.equal(req.body.messages[0].content.length, 2, "1 image + 1 text");
-    assert.equal(req.body.messages[0].content[0].type, "image_url");
-    assert.equal(req.body.messages[0].content[0].image_url.url, "data:image/png;base64,abc");
-    assert.equal(req.body.messages[0].content[1].type, "text");
+    assert.equal(content.length, 2, "1 image + 1 text");
+    assert.equal(content[0].type, "image_url");
+    assert.equal(content[0].image_url.url, "data:image/png;base64,abc");
+    assert.equal(content[1].type, "text");
   });
 });
 
@@ -208,12 +192,10 @@ describe("multi-image cache key", () => {
     const img = "data:image/png;base64,single";
     const prompt = MODE_PROMPTS.describe;
 
-    // Key from array path: images = [{ base64: img }], combinedBase64 = img.join("::") = img (no "::" for single)
     const combinedArray = [img].join("::");
     const hashArray = createHash("sha256").update(combinedArray).digest("hex");
     const keyArray = getCacheKey(hashArray, prompt);
 
-    // Key from string path: imageHash = sha256(img)
     const hashString = createHash("sha256").update(img).digest("hex");
     const keyString = getCacheKey(hashString, prompt);
 

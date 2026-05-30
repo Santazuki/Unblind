@@ -1,74 +1,90 @@
-import { MimoProvider } from "./mimo.js";
-import { OpenAIProvider } from "./openai.js";
-import { GeminiProvider } from "./gemini.js";
+import { GenericProvider } from "./generic-provider.js";
+import { PROTOCOLS } from "./protocols.js";
 import { log } from "../logger.js";
 import { GenericProvider } from "./generic-provider.js";
 import { PROTOCOLS } from "./protocols.js";
 
 /**
- * Provider 注册表 — 新增模型只需加一行
- * name:   用于 UNBLIND_PROVIDER_ORDER 排序
- * cls:    Provider 类（构造函数）
- * envKey: 决定是否创建的 env 变量名（存在即启用）
- * opts:   (key) => 构造函数额外参数
+ * Provider 注册表 — 纯数据
+ * 新增 Provider = 加 1 行（不写逻辑代码）
+ * overrides 仅允许 buildBody 和 parseError
  */
-const REGISTRY = [
-  {
-    name: "mimo",
-    cls: MimoProvider,
-    envKey: "MIMO_API_KEY",
-    build: (apiKey, baseUrl, model, timeoutMs) =>
-      new MimoProvider({ apiKey, baseUrl, model, timeoutMs }),
-  },
+export const REGISTRY = [
+  // ── OpenAI 协议家族 (5 Provider) ──
   {
     name: "openai",
-    cls: OpenAIProvider,
+    protocol: "openai-chat-completions",
     envKey: "OPENAI_API_KEY",
-    build: (apiKey, _baseUrl, model, timeoutMs) =>
-      new OpenAIProvider({ apiKey, model, timeoutMs }),
-  },
-  {
-    name: "ollama",
-    cls: OpenAIProvider,
-    envKey: "OLLAMA_BASE_URL",
-    build: (apiKey, url, model, timeoutMs) =>
-      new OpenAIProvider({ apiKey: "ollama", baseUrl: url, model, timeoutMs }),
-  },
-  {
-    name: "gemini",
-    cls: GeminiProvider,
-    envKey: "GEMINI_API_KEY",
-    build: (apiKey, _url, model, timeoutMs) =>
-      new GeminiProvider({ apiKey, baseUrl: process.env.GEMINI_BASE_URL || "", model: process.env.GEMINI_MODEL || model || "gemini-2.5-flash", timeoutMs }),
+    baseUrl: "https://api.openai.com/v1",
+    model: "gpt-4o",
+    limits: { rpm: 500, tpm: 2000000 },
   },
   {
     name: "groq",
-    cls: OpenAIProvider,
+    protocol: "openai-chat-completions",
     envKey: "GROQ_API_KEY",
-    build: (apiKey, _url, model, timeoutMs) =>
-      new OpenAIProvider({ apiKey, baseUrl: process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1", model: process.env.GROQ_MODEL || "llama-4-vision", timeoutMs }),
+    baseUrl: process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1",
+    model: process.env.GROQ_MODEL || "llama-4-vision",
+    limits: { rpm: 30, tpm: 30000 },
+    overrides: {
+      buildBody(proto, model, content, opts) {
+        const body = proto.buildBody(model, content, opts);
+        body.max_tokens = Math.min(body.max_tokens, 4096);
+        return body;
+      },
+    },
   },
   {
     name: "together",
-    cls: OpenAIProvider,
+    protocol: "openai-chat-completions",
     envKey: "TOGETHER_API_KEY",
-    build: (apiKey, _url, model, timeoutMs) =>
-      new OpenAIProvider({ apiKey, baseUrl: process.env.TOGETHER_BASE_URL || "https://api.together.xyz/v1", model: process.env.TOGETHER_MODEL || "Llama-4-Maverick", timeoutMs }),
+    baseUrl: process.env.TOGETHER_BASE_URL || "https://api.together.xyz/v1",
+    model: process.env.TOGETHER_MODEL || "Llama-4-Maverick",
+    limits: { rpm: 60, tpm: 60000 },
   },
   {
     name: "fireworks",
-    cls: OpenAIProvider,
+    protocol: "openai-chat-completions",
     envKey: "FIREWORKS_API_KEY",
-    build: (apiKey, _url, model, timeoutMs) =>
-      new OpenAIProvider({ apiKey, baseUrl: process.env.FIREWORKS_BASE_URL || "https://api.fireworks.ai/inference/v1", model: process.env.FIREWORKS_MODEL || "llama-v4", timeoutMs }),
+    baseUrl: process.env.FIREWORKS_BASE_URL || "https://api.fireworks.ai/inference/v1",
+    model: process.env.FIREWORKS_MODEL || "llama-v4",
+    limits: { rpm: 60, tpm: 60000 },
+  },
+  {
+    name: "ollama",
+    protocol: "openai-chat-completions",
+    envKey: "OLLAMA_BASE_URL",
+    baseUrl: process.env.OLLAMA_BASE_URL || "http://localhost:11434/v1",
+    model: "llama3.2-vision",
+    limits: {},
+  },
+
+  // ── Anthropic 协议家族 ──
+  {
+    name: "mimo",
+    protocol: "anthropic-messages",
+    envKey: "MIMO_API_KEY",
+    baseUrl: "",
+    model: "mimo-v2.5",
+    limits: { rpm: 60, rpd: 1000, tpm: 100000 },
+  },
+
+  // ── Google 协议家族 ──
+  {
+    name: "gemini",
+    protocol: "google-generative-ai",
+    envKey: "GEMINI_API_KEY",
+    baseUrl: process.env.GEMINI_BASE_URL || "https://generativelanguage.googleapis.com/v1beta",
+    model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+    limits: { rpm: 15, rpd: 1500, tpm: 1000000 },
   },
 ];
 
 /**
  * 加载已配置的 Provider，按 order 排序
- * @param {string} order - "mimo,openai,ollama"
- * @param {object} opts - { model, timeoutMs, baseUrls: {mimo, openai, ollama} }
- * @returns {Array<{provider, name}>}
+ * @param {string} order — "openai,groq,mimo"
+ * @param {object} opts — { model, timeoutMs, baseUrls }
+ * @returns {Array<{ provider: GenericProvider, name: string }>}
  */
 export function loadProviders(order, opts = {}) {
   const { model, timeoutMs, baseUrls = {} } = opts;
@@ -77,10 +93,32 @@ export function loadProviders(order, opts = {}) {
   for (const entry of REGISTRY) {
     const key = process.env[entry.envKey] || "";
     if (!key) continue;
-    available.set(entry.name, {
-      provider: entry.build(key, baseUrls[entry.name] || "", model, timeoutMs),
-      name: entry.name,
-    });
+
+    const proto = PROTOCOLS[entry.protocol];
+    if (!proto) {
+      log("warn", "registry", "unknown_protocol", { provider: entry.name, protocol: entry.protocol });
+      continue;
+    }
+
+    const baseUrl = baseUrls[entry.name] || entry.baseUrl;
+    const providerModel = model || entry.model;
+
+    try {
+      available.set(entry.name, {
+        provider: new GenericProvider({
+          name: entry.name,
+          protocol: proto,
+          baseUrl,
+          apiKey: key,
+          model: providerModel,
+          timeoutMs,
+          overrides: entry.overrides || {},
+        }),
+        name: entry.name,
+      });
+    } catch (err) {
+      log("warn", "registry", "provider_init_failed", { provider: entry.name, error: err.message });
+    }
   }
 
   const ordered = order.split(",").map(s => s.trim());
@@ -88,6 +126,7 @@ export function loadProviders(order, opts = {}) {
   for (const name of ordered) {
     if (available.has(name)) result.push(available.get(name));
   }
+
   log("debug", "registry", "providers_loaded", { order, count: result.length });
   return result;
 }

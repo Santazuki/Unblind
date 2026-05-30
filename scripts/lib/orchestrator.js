@@ -7,7 +7,7 @@ import { withRetry, CircuitBreaker } from "./retry.js";
 import { ClientError } from "./errorHandler.js";
 import { MODE_PROMPTS, VALID_MODES } from "./providers/provider.js";
 import { getCacheKey, get, set, getStats } from "./cache.js";
-import { loadProviders, loadProvidersV3 } from "./providers/registry.js";
+import { loadProviders } from "./providers/registry.js";
 
 const FORMAT_PROMPTS = {
   json: "\n\nOutput the result as a single valid JSON object with keys: summary, details (array of strings). Do not wrap in markdown code blocks.",
@@ -17,28 +17,17 @@ const FORMAT_PROMPTS = {
 
 /** 构建 Provider 链，每个 Provider 独立 CircuitBreaker */
 function buildProviderChain(config) {
-  const useV3 = process.env.UNBLIND_PROTOCOL_DRIVEN === "1";
+  const mimoKey = getApiKey();
+  const baseUrls = {
+    mimo: mimoKey ? getBaseUrl(mimoKey) : "",
+  };
+  const model = process.env.OPENAI_VISION_MODEL || config.model;
 
-  let providers;
-  if (useV3) {
-    providers = loadProvidersV3(config.providerOrder, {
-      model: config.model,
-      timeoutMs: config.requestTimeoutMs,
-      baseUrls: {},
-    });
-  } else {
-    const mimoKey = getApiKey();
-    const baseUrls = {
-      mimo: mimoKey ? getBaseUrl(mimoKey) : "",
-    };
-    const model = process.env.OPENAI_VISION_MODEL || config.model;
-
-    providers = loadProviders(config.providerOrder, {
-      model: config.model,
-      timeoutMs: config.requestTimeoutMs,
-      baseUrls,
-    });
-  }
+  const providers = loadProviders(config.providerOrder, {
+    model,
+    timeoutMs: config.requestTimeoutMs,
+    baseUrls,
+  });
 
   return providers.map(p => ({
     ...p,

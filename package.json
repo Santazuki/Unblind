@@ -1,6 +1,6 @@
 {
   "name": "unblind",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "description": "Give DeepSeek eyes — vision enhancement for Claude Code",
   "type": "module",
   "engines": {

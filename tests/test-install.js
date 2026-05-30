@@ -51,7 +51,7 @@ describe("install.sh", () => {
     const skill = `${fakeHome}/.claude/skills/unblind`;
 
     // 核心运行时文件必须存在（最少验证）
-    ["SKILL.md", "scripts/unblind.mjs", "scripts/lib/providers/mimo.js"]
+    ["SKILL.md", "scripts/unblind.mjs", "scripts/lib/providers/registry.js"]
       .forEach(f => {
         assert.ok(existsSync(`${skill}/${f}`), `Must exist: ${f}`);
       });

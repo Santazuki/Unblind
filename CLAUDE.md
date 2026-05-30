@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-Phase 1+2+3 完成，Phase 5 高级功能完成。165 行单文件 → 16 模块，95 tests（93 pass, 0 fail, 2 API-skip）。Provider 注册表 7 条目（Mimo/OpenAI/Ollama/Gemini/Groq/Together/Fireworks）。
+Phase 1+2+3+5 完成。v3.0 协议驱动架构。15 模块，161 tests（159 pass, 0 fail, 2 API-skip）。Provider 注册表 7 条目（Mimo/OpenAI/Ollama/Gemini/Groq/Together/Fireworks），3 协议族（Anthropic Messages / OpenAI Chat Completions / Google Generative AI）。
 
 > 注意：`docs/project-prepare-md/` 中的设计文档使用 `src/` + TypeScript，代表**原始蓝图**。实际采用 `scripts/lib/` + JavaScript + `env.*` 配置格式。差异是有意为之（零编译、Claude Code 原生 env 注入），历史设计文档未更新。
 
@@ -18,7 +18,7 @@ scripts/
 ├── install.js               # Node.js 安装脚本（--check 诊断模式）
 └── lib/
     ├── orchestrator.js      # 调度核心：config → image → cache → provider → result
-    ├── httpClient.js        # 统一 HTTP 层：fetch + 超时 + 错误分类 + Retry-After
+    ├── httpClient.js        # 统一 HTTP 层：fetch + 超时 + 错误分类 + parseError 委托
     ├── config.js            # 读取 settings.json，校验，默认值，saveConfig()
     ├── credentialManager.js # API Key + Base URL 自动检测（sk-ant/sk-/tp- 前缀）
     ├── imageProcessor.js    # 格式/魔数/大小校验 + Base64 编码（async readFile）
@@ -27,13 +27,12 @@ scripts/
     ├── errorHandler.js      # ClientError / ServerError / NetworkError + 中文提示
     ├── logger.js            # JSON Lines → stderr
     └── providers/
-        ├── provider.js      # IVisionProvider 接口 + BaseProvider 基类
-        ├── registry.js      # Provider 注册表（一行新增模型）
-        ├── mimo.js          # Mimo Anthropic-compatible API
-        ├── openai.js        # OpenAI Chat Completions API (GPT-4V/GLM-5V/Ollama)
-        └── gemini.js        # Google Gemini API
-tests/                       # node --test tests/test-*.js (95 tests, 93 pass, 2 API-skip)
-docs/test-results/           # 16 份按步骤的测试结果
+        ├── provider.js      # MODE_PROMPTS + validateProvider（BaseProvider 已由 GenericProvider 替代）
+        ├── registry.js      # 纯数据注册表 — 新增 Provider = 加一行
+        ├── protocols.js     # 3 协议族纯函数（anthropic-messages / openai-chat-completions / google-generative-ai）
+        └── generic-provider.js  # 唯一 Provider 类，调度协议函数，overrides 校验
+tests/                       # node --test tests/test-*.js (163 tests, 161 pass, 0 fail, 2 API-skip)
+docs/test-results/           # 18 份按步骤的测试结果
 resources/troubleshooting.md # Phase 0 修复命令、常见错误
 ```
 
@@ -53,7 +52,10 @@ resources/troubleshooting.md # Phase 0 修复命令、常见错误
 | `SKILL.md` | Skill 入口（触发词、自愈流程、执行规则） | 影响所有用户 |
 | `scripts/unblind.mjs` | CLI 入口 | 影响核心功能 |
 | `scripts/lib/orchestrator.js` | 调度核心 | 串联全链路 |
-| `scripts/lib/providers/mimo.js` | Mimo API 调用 | 影响核心功能 |
+| `scripts/lib/providers/protocols.js` | 3 协议族纯函数 | 新增协议在此定义 |
+| `scripts/lib/providers/generic-provider.js` | 唯一 Provider 类 | 影响所有 Provider 调用 |
+| `scripts/lib/providers/registry.js` | 纯数据注册表 | 新增 Provider 加一行 |
+| `scripts/lib/httpClient.js` | HTTP 层 + parseError 委托 | 影响错误分类 |
 | `install.sh` | 部署到 ~/.claude/skills/unblind/ | 影响分发 |
 
 ## 路线
@@ -63,9 +65,9 @@ resources/troubleshooting.md # Phase 0 修复命令、常见错误
 | 0 原型 | ✅ |
 | 1 模块化 | ✅ |
 | 2 稳定性（缓存/健康检查/CLI管理） | ✅ |
-| 3 扩展（多 Provider） | ✅ Mimo→OpenAI→Ollama 链式轮换 |
-| 4 多 Agent（MCP） | ⏭️ 跳过（设计决策：自行车道不修高速） |
-| 5 高级功能 | ✅ 多图对比 + 结构化输出 + Provider 扩展(7条目) |
+| 3 扩展（多 Provider） | ✅ v3.0 协议驱动架构 |
+| 4 多 Agent（MCP） | ⏭️ 跳过 |
+| 5 高级功能 | ✅ 多图对比 + 结构化输出 + 7 Provider |
 
 ## 按需读取策略
 
@@ -82,7 +84,7 @@ resources/troubleshooting.md # Phase 0 修复命令、常见错误
 **常见任务速查：**
 - 加新功能 → `scripts/lib/orchestrator.js` 是入口，`scripts/lib/providers/provider.js` 是接口
 - 修 Bug → 从 `tests/` 写复现用例开始
-- 加新 Provider → 参考 `scripts/lib/providers/mimo.js`，实现 `IVisionProvider` 接口
+- 加新 Provider → 在 `scripts/lib/providers/registry.js` REGISTRY 数组中加一行（纯数据）
 - 验证改动 → `node --test tests/test-*.js`
 
 ## 记忆文件
@@ -163,13 +165,24 @@ Round 3: 1 审计员最终确认
 
 ### Quality Gate 协作循环
 
+**PM Agent 硬约束：以下角色必须通过 Agent 工具派发独立 Agent 执行，PM 不得亲自替代。违规则关口无效。**
+
+| 角色 | 派发时机 | 原因 |
+|------|----------|------|
+| Security Lead | G2(审设计) + Part2(攻击面汇总+最终评估) | PM 审自己的设计=盲区 |
+| Reviewer | G3 交叉审查 | 独立视角是审查唯一价值 |
+| QA Engineer | Part2 全量测试 | 测试和修 bug 不能同一人 |
+| Reliability Engineer | Part2 修复失败项 | 同上 |
+
+**自检**：每关完成后 PM 自问"这关是独立 Agent 做的还是我自己做的？"→ 自己做的立即补派。
+
 ```
 Security Lead (方向) → QA Engineer (测试) → Reliability Engineer (修复)
       ↑                                                    ↓
       └────────── 重新评估 ←────── 重测 (≤3轮) ←──────────┘
 ```
 
-1. **Security Lead** 攻击面分析 + 审查 Architect 设计（安全左移）
+1. **Security Lead** 攻击面分析 + 审查 Architect 设计（安全左移，G2 首次 + Part2 最终）
 2. **QA Engineer** 全量回归 + 安全测试 + 边缘场景
 3. **Reliability Engineer** 修复失败项（配置/环境/测试），代码bug 回 Developer
 4. **3 轮上限**：仍失败 → Security Lead 判定阻塞性 → 通知 Leader 或记录技术债
@@ -179,9 +192,21 @@ Security Lead (方向) → QA Engineer (测试) → Reliability Engineer (修复
 
 详见 `docs/project-prepare-md/多agent协作开发unblind.md`。角色分工：
 - **你（用户）**：Team Leader，讨论需求、审核方向、最终决策
-- **PM Agent（我）**：理解需求 → 派发任务 → 5 个关口逐项查验 → 控制流程。Architect 设计未出不等 Developer。Reviewer 有 CRITICAL 阻断 Part 2。QA 失败 3 轮通知 Leader。
+- **PM Agent（我）**：理解需求 → 派发任务 → 5 个关口逐项查验 → 控制流程。**不得亲自执行 SL/Reviewer/QA/RE 角色工作**。Architect 设计未出不等 Developer。Reviewer 有 CRITICAL 阻断 Part 2 并回退 Developer。QA 失败 3 轮通知 Leader。
 - **Subagent 6 角色**：Part 1(Architect→Developer+Reviewer, SL 并行审设计) + Part 2(SL→QA→RE 循环≤3轮)
 - **自动触发**：说"多 agent"即启动完整双 pipeline，不漏角色。
+- **G3 Reviewer 分工**：3 个 Reviewer 各负责不同维度（安全/代码质量/集成），缩小审查范围避免重复。`CRITICAL` 发现 → 阻断 Part 2 → 退回 Developer 修复 → Reviewer 复审查 → 确认 CLEAN 后才进 Part 2。
+
+### PM 调度规则速查
+
+详见 `docs/project-prepare-md/多agent协作开发unblind.md` 第六章"PM 调度规则：串行 vs 并行"。
+
+**派发前必答两问**：
+1. B 的产出依赖 A 的代码/设计？→ **串行**
+2. B 和 A 修改同一文件？→ **串行**
+3. 都不是 → **并行**
+
+**速记**：只读 Agent 永远并行。Developer 用文件交集 + 模块依赖判定。Part 2 全程串行。
 
 ### 提交规范（每次 commit 后强制执行）
 
