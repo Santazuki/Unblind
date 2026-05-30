@@ -17,6 +17,21 @@ function stripB64Prefix(data) {
 }
 
 /**
+ * 通用 parseError — 3 协议族共用。
+ * 根据 HTTP status 和响应体将错误归入 auth / rate_limit / server / client。
+ * @param {object} data - API 响应体
+ * @param {number} status - HTTP 状态码
+ * @returns {{category:string, message?:string}}
+ */
+function commonParseError(data, status) {
+  const err = data.error || data;
+  if (status === 401 || status === 403) return { category: "auth" };
+  if (status === 429) return { category: "rate_limit" };
+  if (status >= 500) return { category: "server" };
+  return { category: "client", message: err.message };
+}
+
+/**
  * @typedef {Object} ProtocolMethods
  * @property {(model: string) => string} endpoint
  * @property {(apiKey: string) => Record<string,string>} auth
@@ -78,13 +93,7 @@ export const PROTOCOLS = {
       return text;
     },
 
-    parseError(data, status) {
-      const err = data.error || data;
-      if (status === 401 || status === 403) return { category: "auth" };
-      if (status === 429) return { category: "rate_limit" };
-      if (status >= 500) return { category: "server" };
-      return { category: "client", message: err.message };
-    },
+    parseError(data, status) { return commonParseError(data, status); },
   },
 
   /** OpenAI Chat Completions API */
@@ -126,13 +135,7 @@ export const PROTOCOLS = {
       return text;
     },
 
-    parseError(data, status) {
-      const err = data.error || data;
-      if (status === 401 || status === 403) return { category: "auth" };
-      if (status === 429) return { category: "rate_limit" };
-      if (status >= 500) return { category: "server" };
-      return { category: "client", message: err.message };
-    },
+    parseError(data, status) { return commonParseError(data, status); },
   },
 
   /** Google Generative AI API */
@@ -177,12 +180,6 @@ export const PROTOCOLS = {
       return text;
     },
 
-    parseError(data, status) {
-      const err = data.error || data;
-      if (status === 401 || status === 403) return { category: "auth" };
-      if (status === 429) return { category: "rate_limit" };
-      if (status >= 500) return { category: "server" };
-      return { category: "client", message: err.message };
-    },
+    parseError(data, status) { return commonParseError(data, status); },
   },
 };
