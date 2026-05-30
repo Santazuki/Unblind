@@ -9,24 +9,16 @@
 
 ## 为什么选择 Unblind
 
-市面上的视觉 skill 大多是一层薄薄的 API 封装 — 请求失败就抛异常，配置丢了就卡住。Unblind 从零开始就按**工程化后端**的标准设计：Phase 0 自愈、指数退避 + 熔断、SHA256 持久化缓存、魔数文件校验、三轮安全审计。
+大多数视觉 skill 是一层薄薄的 API 封装——请求失败就抛异常，配置丢了就卡住。Unblind 按后端工程标准设计，每一步都有防御：
 
-| 特性 | unblind | vision-support | claude-code-vision | asuojun/claude-vision |
-|------|:---:|:---:|:---:|:---:|
-| 多 Provider 支持 | ✅ 7 | ✅ 19+ | ✅ 3 | ✅ |
-| Phase 0 自愈配置 | ✅ | ❌ | ❌ | ❌ |
-| 熔断 + 指数退避 | ✅ | ❌ | ❌ | ❌ |
-| 持久化缓存 (SHA256+LRU) | ✅ | ❌ | ❌ | ❌ |
-| 魔数文件校验 | ✅ | ❌ | ❌ | ❌ |
-| Provider 故障转移 | ✅ | ✅ | ❌ | ❌ |
-| 安全审计记录 | ✅ 三轮 CLEAN | ❌ | ❌ | ❌ |
-| 结构化输出 (json/yaml/csv) | ✅ | ❌ | ❌ | ❌ |
-| `--compare` 多图对比 | ✅ | ❌ | ❌ | ❌ |
-| `--health` CLI 诊断 | ✅ | ❌ | ❌ | ❌ |
-| 零 npm 依赖 | ✅ | ❌ | ❌ | ❌ |
-| 零 exec（安全沙箱） | ✅ | ❌ | ❌ | ❌ |
-
-> 注：对比基于各项目公开 README/SKILL.md，截至 2026 年 5 月。如有偏差请提 issue。
+- **Phase 0 自愈**：每次调用静默检查环境，配置缺失当场修复，不打断用户
+- **熔断 + 指数退避**：每 Provider 独立 CircuitBreaker，故障不雪崩
+- **SHA256 持久化缓存**：内容寻址，跨进程命中，TTL + LRU 1000
+- **Provider 故障转移**：链式轮换 7 个 Provider，第一个失败自动切下一个
+- **魔数文件校验**：读取文件头字节，拒绝伪装成图片的攻击文件
+- **安全沙箱**：零 exec / child_process，API Key 不在任何输出中暴露
+- **结构化输出**：`--format json|yaml|csv`，Agent 可编程调用
+- **零 npm 依赖**：只用 Node.js >= 18 内置模块，clone 即用
 
 ## 快速开始
 
@@ -124,10 +116,12 @@ v3.0 协议驱动架构 — 3 协议族 (Anthropic Messages / OpenAI Chat Comple
 
 ## 工程实践
 
+本项目全程采用 **Claude Code + Subagent-Driven Development** 开发。
+
 - **171 tests CI 实跑**（169 pass, 0 fail, 2 API-skip），GitHub Actions
 - **TDD**：`node --test` 内置框架，先测试后实现
 - **零 npm 依赖**：只用 Node.js >= 18 内置模块
-- **Subagent-Driven 开发**：Architect → Developer + Reviewer → SL → QA → RE 双 Pipeline
+- **双 Pipeline 协作**：Architect → Developer + Reviewer → SL → QA → RE，PM 5 关口控制
 - **CLAUDE.md 自动维护**：阶段/重构/模块变化时即时同步
 
 📄 [多 Agent 协作指南](docs/project-prepare-md/多agent协作开发unblind.md) · [实现计划](docs/superpowers/plans/2026-05-30-provider-v3-protocol-driven.md)
@@ -142,7 +136,16 @@ Give your AI Agent reliable vision. Self-healing config, circuit-breaker retry, 
 
 ### Why Unblind
 
-Most vision skills are thin API wrappers — fail on a bad request, freeze on missing config. Unblind is engineered like a production backend: Phase 0 self-healing, exponential backoff + circuit breaker, SHA256 persistent cache, magic byte validation, and a 3-round security audit (CLEAN).
+Most vision skills are thin API wrappers — fail on a bad request, freeze on missing config. Unblind is engineered with defense at every layer:
+
+- **Phase 0 Self-Healing**: Silent pre-flight check on every invocation, auto-repairs config gaps
+- **Circuit Breaker + Retry**: Per-provider isolation, exponential backoff, fault containment
+- **SHA256 Persistent Cache**: Content-addressed, cross-process hit, TTL + LRU 1000
+- **Provider Failover**: Chain rotation across 7 providers, automatic fallback
+- **Magic Byte Validation**: File header verification, rejects disguised attack files
+- **Security Sandbox**: Zero exec, API key never exposed in output
+- **Structured Output**: `--format json|yaml|csv` for programmable agent consumption
+- **Zero npm Dependencies**: Node.js >= 18 built-in modules only, clone and run
 
 ### Quick Install
 
@@ -152,12 +155,13 @@ Send this to Claude Code:
 
 ### Engineering
 
-- **Phase 0 Self-Healing**: Silent pre-flight check on every invocation, auto-repairs config gaps
-- **Circuit Breaker + Retry**: Per-provider isolation, exponential backoff, 60s cooldown
-- **SHA256 Cache**: Content-addressed, cross-process hit, TTL + LRU 1000
-- **Security Sandbox**: Zero exec, magic byte validation, API key protection, error sanitization
-- **Protocol-Driven Architecture (v3.0)**: 3 protocol families, 7 providers, pure-data registry
-- **171 tests in CI**: 169 pass, 0 fail. TDD with `node --test`, zero npm deps.
+Built entirely with **Claude Code + Subagent-Driven Development**.
+
+- **171 tests in CI**: 169 pass, 0 fail. GitHub Actions enforced
+- **TDD**: `node --test` native framework, test-first
+- **Zero npm deps**: Node.js >= 18 built-in modules only
+- **Dual-Pipeline**: Architect → Developer + Reviewer → SL → QA → RE, 5-gate PM control
+- **CLAUDE.md auto-maintained**: syncs on phase changes, refactors, module updates
 
 ### License
 
